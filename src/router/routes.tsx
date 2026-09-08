@@ -10,6 +10,8 @@ import { HistoryPage } from '@/pages/History'
 import { ConnectPage } from '@/pages/Connect'
 import { ProfilePage } from '@/pages/Profile'
 import { NotFoundPage } from '@/pages/NotFound'
+import { DevPage, DevUserPage } from '@/pages/Dev'
+import { RequireAdmin } from '@/router/RequireAdmin'
 import { useAuthStore } from '@/stores/authStore'
 
 /**
@@ -37,6 +39,10 @@ export function AppRoutes() {
           <Route path={routes.history} element={<HistoryPage />} />
           <Route path={routes.connect} element={<ConnectPage />} />
           <Route path={routes.profile} element={<ProfilePage />} />
+          <Route element={<RequireAdmin />}>
+            <Route path={routes.dev} element={<DevPage />} />
+            <Route path="/dev/:userId" element={<DevUserPage />} />
+          </Route>
         </Route>
       </Route>
 

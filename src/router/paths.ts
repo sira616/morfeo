@@ -6,5 +6,7 @@ export const routes = {
   history: '/historial',
   connect: '/reloj',
   profile: '/perfil',
+  dev: '/dev',
+  devUser: (userId: string) => `/dev/${userId}`,
   notFound: '*',
 } as const

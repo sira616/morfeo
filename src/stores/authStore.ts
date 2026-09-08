@@ -5,6 +5,7 @@ export type AuthUser = {
   email: string
   displayName: string
   onboardingDone: boolean
+  isAdmin: boolean
   defaultWakeTime: string
   sleepNeedMinutes: number
   declaredLatencyMinutes: number

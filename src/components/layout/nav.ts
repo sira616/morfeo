@@ -1,4 +1,12 @@
-import { CalendarRange, MessageCircle, Moon, User, Watch, type LucideIcon } from 'lucide-react'
+import {
+  CalendarRange,
+  MessageCircle,
+  Moon,
+  ShieldCheck,
+  User,
+  Watch,
+  type LucideIcon,
+} from 'lucide-react'
 import { routes } from '@/router/paths'
 
 export type NavItem = {
@@ -15,3 +23,7 @@ export const NAV: NavItem[] = [
   { to: routes.connect, label: 'Reloj', icon: Watch },
   { to: routes.profile, label: 'Perfil', icon: User },
 ]
+
+/** Solo para administradores. La puerta de verdad está en el backend, que responde
+ *  404 a quien no lo es; esto evita enseñar un enlace que no lleva a ninguna parte. */
+export const ADMIN_NAV: NavItem[] = [{ to: routes.dev, label: 'Dev', icon: ShieldCheck }]

@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { Moon } from 'lucide-react'
 import { ThemeToggle } from '@/components/molecules/ThemeToggle'
-import { NAV } from '@/components/layout/nav'
+import { ADMIN_NAV, NAV } from '@/components/layout/nav'
 import { cn } from '@/lib/utils'
 import { routes } from '@/router/paths'
 import { useAuthStore } from '@/stores/authStore'
@@ -15,6 +15,9 @@ import { useAuthStore } from '@/stores/authStore'
  */
 export function AppShell() {
   const user = useAuthStore((s) => s.user)
+  // La barra lateral tiene sitio para el panel; la inferior del móvil, no: cinco
+  // iconos ya llenan el ancho del pulgar.
+  const sidebarNav = user?.isAdmin ? [...NAV, ...ADMIN_NAV] : NAV
 
   return (
     <div
@@ -35,7 +38,7 @@ export function AppShell() {
         </NavLink>
 
         <nav className="flex flex-col gap-1" aria-label="Secciones">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {sidebarNav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}

@@ -1,5 +1,13 @@
 import { HttpResponse, http } from 'msw'
-import { mockInsights, mockNights, mockRecommendation, mockTips, mockUser } from '@/mocks/fixtures'
+import {
+  mockDevUserDetail,
+  mockDevUsers,
+  mockInsights,
+  mockNights,
+  mockRecommendation,
+  mockTips,
+  mockUser,
+} from '@/mocks/fixtures'
 import { createCheckinSseStream } from '@/mocks/sse'
 import type { Night, Recommendation } from '@/api/morfeo'
 
@@ -147,6 +155,18 @@ export const handlers = [
     unauthorized(request)
       ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
       : HttpResponse.json(mockInsights),
+  ),
+
+  http.get('/api/dev/users', ({ request }) =>
+    unauthorized(request)
+      ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
+      : HttpResponse.json(mockDevUsers),
+  ),
+
+  http.get('/api/dev/users/:userId', ({ request }) =>
+    unauthorized(request)
+      ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
+      : HttpResponse.json(mockDevUserDetail),
   ),
 
   http.post('/api/checkin/stream', async ({ request }) => {

@@ -1,11 +1,20 @@
 import type { AuthUser } from '@/stores/authStore'
-import type { AdherenceNight, Insights, Night, Recommendation, TipsToday } from '@/api/morfeo'
+import type {
+  AdherenceNight,
+  DevUser,
+  DevUserDetail,
+  Insights,
+  Night,
+  Recommendation,
+  TipsToday,
+} from '@/api/morfeo'
 
 export const mockUser: AuthUser = {
   id: 'user-demo',
   email: 'demo@morfeo.app',
   displayName: 'Demo',
   onboardingDone: true,
+  isAdmin: true,
   defaultWakeTime: '07:00:00',
   sleepNeedMinutes: 480,
   declaredLatencyMinutes: 25,
@@ -88,13 +97,41 @@ export const mockInsights: Insights = {
     mean_midpoint_minutes: 3 * 60 + 20,
     nights: 21,
   },
-  social_jetlag: {
-    minutes: 74,
-    weekday_midpoint_minutes: 3 * 60 + 5,
-    weekend_midpoint_minutes: 4 * 60 + 19,
-    weekday_nights: 15,
-    weekend_nights: 6,
-  },
+  associations: [
+    {
+      key: 'alcohol',
+      label: 'alcohol',
+      nights_with: 6,
+      nights_without: 21,
+      mean_sleep_with: 348,
+      mean_sleep_without: 421,
+      mean_efficiency_with: 0.74,
+      mean_efficiency_without: 0.83,
+      delta_sleep_minutes: -73,
+    },
+    {
+      key: 'cafe_tarde',
+      label: 'café después de las cuatro',
+      nights_with: 11,
+      nights_without: 16,
+      mean_sleep_with: 382,
+      mean_sleep_without: 419,
+      mean_efficiency_with: 0.78,
+      mean_efficiency_without: 0.84,
+      delta_sleep_minutes: -37,
+    },
+    {
+      key: 'ejercicio',
+      label: 'media hora de ejercicio',
+      nights_with: 9,
+      nights_without: 18,
+      mean_sleep_with: 428,
+      mean_sleep_without: 397,
+      mean_efficiency_with: 0.86,
+      mean_efficiency_without: 0.8,
+      delta_sleep_minutes: 31,
+    },
+  ],
   adherence: {
     streak: 3,
     rate: 0.64,
@@ -156,5 +193,51 @@ export const mockTips: TipsToday = {
       source: 'Estudios de temperatura ambiente y eficiencia del sueño',
       relevant: false,
     },
+  ],
+}
+
+export const mockDevUsers: DevUser[] = [
+  {
+    id: 'user-demo',
+    email: 'demo@morfeo.app',
+    display_name: 'Demo',
+    is_admin: true,
+    onboarding_done: true,
+    created_at: '2026-08-01T10:00:00',
+    wearable_provider: 'import',
+    nights: 42,
+    checkins: 27,
+    recommendations: 18,
+    last_night: daysAgo(1),
+    last_seen: `${daysAgo(0)}T21:40:00`,
+  },
+  {
+    id: 'user-pablo',
+    email: 'pablo@morfeo.app',
+    display_name: null,
+    is_admin: false,
+    onboarding_done: true,
+    created_at: '2026-08-19T18:30:00',
+    wearable_provider: null,
+    nights: 6,
+    checkins: 4,
+    recommendations: 5,
+    last_night: daysAgo(3),
+    last_seen: `${daysAgo(2)}T23:05:00`,
+  },
+]
+
+export const mockDevUserDetail: DevUserDetail = {
+  user: mockDevUsers[0]!,
+  activity: [
+    { action: 'checkin', count: 27, last: `${daysAgo(0)}T21:40:00` },
+    { action: 'login', count: 31, last: `${daysAgo(0)}T21:38:00` },
+    { action: 'nights', count: 3, last: `${daysAgo(1)}T08:10:00` },
+  ],
+  events: [
+    { at: `${daysAgo(0)}T21:40:00`, action: 'checkin', summary: 'coffees, last_meal, mood' },
+    { at: `${daysAgo(0)}T21:38:00`, action: 'login', summary: null },
+    { at: `${daysAgo(1)}T08:10:00`, action: 'nights', summary: '42 noches' },
+    { at: `${daysAgo(1)}T08:09:00`, action: 'followed', summary: `${daysAgo(2)}: sí` },
   ],
 }

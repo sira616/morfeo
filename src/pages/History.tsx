@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { SleepHeatmap } from '@/components/insights/SleepHeatmap'
 import { RegularityCard } from '@/components/insights/RegularityCard'
+import { AssociationsCard } from '@/components/insights/AssociationsCard'
 import { AdherenceCard } from '@/components/insights/AdherenceCard'
 import { getInsights, getNights, type Night } from '@/api/morfeo'
 
@@ -120,16 +121,12 @@ export function HistoryPage() {
           </p>
         </SurfaceCard>
 
-        {insights ? (
-          <RegularityCard
-            regularity={insights.regularity}
-            jetlag={insights.social_jetlag}
-          />
-        ) : null}
+        {insights ? <RegularityCard regularity={insights.regularity} /> : null}
       </div>
 
       {insights ? (
         <div className="grid gap-6 lg:grid-cols-2">
+          <AssociationsCard associations={insights.associations} />
           <SleepHeatmap nights={insights.heatmap} />
           <AdherenceCard
             streak={insights.adherence.streak}

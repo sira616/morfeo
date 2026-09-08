@@ -31,6 +31,8 @@ export type Night = {
   source: string
 }
 
+export type Intensity = 'none' | 'light' | 'moderate' | 'hard'
+
 export type CheckinFields = {
   mood?: number
   energy?: number
@@ -39,6 +41,16 @@ export type CheckinFields = {
   last_caffeine?: string | null
   alcohol?: boolean
   wake_target?: string | null
+  coffees?: number
+  alcohol_units?: number
+  /** Días desde el último porro. 0 = hoy; null = no aplica. */
+  cannabis_days_ago?: number | null
+  exercise_minutes?: number
+  exercise_intensity?: Intensity
+  exercise_end?: string | null
+  meals?: number | null
+  last_meal?: string | null
+  notes?: string | null
 }
 
 /** `wakeTarget` simula otra hora de despertar sin tocar el perfil ni guardar nada. */
@@ -101,12 +113,16 @@ export type Regularity = {
   nights: number
 }
 
-export type SocialJetlag = {
-  minutes: number
-  weekday_midpoint_minutes: number
-  weekend_midpoint_minutes: number
-  weekday_nights: number
-  weekend_nights: number
+export type Association = {
+  key: string
+  label: string
+  nights_with: number
+  nights_without: number
+  mean_sleep_with: number
+  mean_sleep_without: number
+  mean_efficiency_with: number
+  mean_efficiency_without: number
+  delta_sleep_minutes: number
 }
 
 export type AdherenceNight = {
@@ -126,7 +142,8 @@ export type HeatmapNight = {
 export type Insights = {
   /** Null, no cero: sin noches suficientes no hay métrica que enseñar. */
   regularity: Regularity | null
-  social_jetlag: SocialJetlag | null
+  /** Vacío mientras no haya check-ins suficientes a los dos lados de cada factor. */
+  associations: Association[]
   adherence: { streak: number; rate: number | null; series: AdherenceNight[] }
   heatmap: HeatmapNight[]
 }
@@ -137,4 +154,42 @@ export function getTips() {
 
 export function getInsights() {
   return apiClient<Insights>('/api/insights')
+}
+
+// --- Panel de /dev -----------------------------------------------------------
+// Solo devuelve qué registró cada persona y cuándo, nunca lo que escribió.
+
+export type DevUser = {
+  id: string
+  email: string
+  display_name: string | null
+  is_admin: boolean
+  onboarding_done: boolean
+  created_at: string | null
+  wearable_provider: string | null
+  nights: number
+  checkins: number
+  recommendations: number
+  last_night: string | null
+  last_seen: string | null
+}
+
+export type DevEvent = {
+  at: string
+  action: string
+  summary: string | null
+}
+
+export type DevUserDetail = {
+  user: DevUser
+  activity: { action: string; count: number; last: string | null }[]
+  events: DevEvent[]
+}
+
+export function getDevUsers() {
+  return apiClient<DevUser[]>('/api/dev/users')
+}
+
+export function getDevUser(userId: string) {
+  return apiClient<DevUserDetail>(`/api/dev/users/${userId}`)
 }

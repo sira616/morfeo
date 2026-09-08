@@ -1,5 +1,5 @@
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
-import type { Regularity, SocialJetlag } from '@/api/morfeo'
+import type { Regularity } from '@/api/morfeo'
 
 function clock(minutesFromMidnight: number): string {
   const h = Math.floor(minutesFromMidnight / 60) % 24
@@ -13,13 +13,7 @@ function scoreColor(score: number): string {
   return 'var(--mf-error)'
 }
 
-export function RegularityCard({
-  regularity,
-  jetlag,
-}: {
-  regularity: Regularity | null
-  jetlag: SocialJetlag | null
-}) {
+export function RegularityCard({ regularity }: { regularity: Regularity | null }) {
   // Sin horas reales no hay fase que medir. Se dice, en vez de pintar un cero que se
   // leería como "tienes un horario malísimo".
   if (!regularity) {
@@ -75,20 +69,6 @@ export function RegularityCard({
           <dd className="font-bold tabular-nums">±{regularity.sd_minutes} min</dd>
         </div>
       </dl>
-
-      {jetlag ? (
-        <div className="mt-4 border-t pt-3" style={{ borderColor: 'var(--mf-line)' }}>
-          <h3 className="text-body-sm font-bold">Jet lag social</h3>
-          <p className="mt-1 text-body-sm opacity-80">
-            Entre semana tu punto medio cae a las{' '}
-            <strong className="tabular-nums">{clock(jetlag.weekday_midpoint_minutes)}</strong> y
-            el fin de semana a las{' '}
-            <strong className="tabular-nums">{clock(jetlag.weekend_midpoint_minutes)}</strong>:{' '}
-            <strong>{jetlag.minutes} min</strong> de desfase, como cruzar husos horarios
-            cada semana.
-          </p>
-        </div>
-      ) : null}
 
       <p className="mt-4 text-[11px] opacity-50">
         En 61.000 adultos del UK Biobank, el grupo con horarios más regulares tuvo un 30%
