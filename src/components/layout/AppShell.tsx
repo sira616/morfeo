@@ -22,7 +22,7 @@ export function AppShell() {
       style={{ background: 'var(--mf-canvas-radial)' }}
     >
       <header
-        className="flex min-h-touch shrink-0 items-center justify-between gap-md border-b px-md"
+        className="flex min-h-touch shrink-0 items-center justify-between gap-4 border-b px-4"
         style={{ background: 'var(--mf-surf-1)', borderColor: 'var(--mf-line)' }}
       >
         <NavLink
@@ -38,7 +38,7 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-x-hidden overflow-y-auto px-md pb-24 pt-md">
+      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-x-hidden overflow-y-auto px-4 pb-24 pt-4">
         <Outlet />
       </main>
 

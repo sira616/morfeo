@@ -19,11 +19,41 @@ ejemplo están en [`src/mocks/fixtures.ts`](src/mocks/fixtures.ts) y montan a pr
 una racha de eficiencia baja, que es el caso interesante: el que dispara el modo
 restricción y el que tardarías dos semanas en reproducir con datos reales.
 
-Para apuntar al backend de verdad, en `.env`:
+## Conectar con el backend
+
+La app siempre pide a `/api/...` en su propio origen; es el proxy de Vite quien decide
+qué hay detrás. Así el código no sabe si le responde un mock o el backend, y en
+desarrollo no hay CORS de por medio.
+
+Crea `.env.local` (no se versiona) con:
 
 ```
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_TARGET=http://127.0.0.1:8000
 ```
+
+Con esa variable, `npm run dev` **no arranca el servidor de mocks** y manda todo al
+backend. Bórrala y vuelves a trabajar sin él. Los dos procesos:
+
+```bash
+cd ../morfeo-backend && venv/Scripts/activate && uvicorn app.main:app --reload
+```
+
+```bash
+npm run dev
+```
+
+Comprobación rápida de que el proxy llega al sitio correcto:
+
+```bash
+curl -i http://127.0.0.1:5173/api/me
+```
+
+Un `401` con la cabecera `server: uvicorn` significa que estás hablando con el backend.
+Si no aparece esa cabecera, sigues contra los mocks.
+
+Para un despliegue real, donde el frontend y la API están en dominios distintos, se
+usa `VITE_API_BASE_URL` en el build. Ahí sí hay CORS: la URL del frontend tiene que
+estar en `ALLOWED_ORIGINS` del backend.
 
 | Comando | Qué hace |
 |---|---|
@@ -79,6 +109,13 @@ el bundle de producción: 764 kB frente a los 339 kB de ahora.
 
 **La gráfica del historial es SVG a mano.** Son dos series y treinta barras; una
 librería de charting pesaría más que la página entera.
+
+**Para márgenes y rellenos se usa la escala numérica de Tailwind** (`p-4`, `gap-2`,
+`px-6`), no alias con nombre. La plantilla de origen definía `--spacing-sm: 12px` y
+compañía, y Tailwind resuelve `max-w-sm` contra la escala de espaciado antes que
+contra la de anchos: `max-w-sm` valía 12px y cualquier tarjeta centrada salía como un
+hilo de píxeles. El único alias que queda es `--spacing-touch` (44px, objetivo táctil
+mínimo), que no colisiona con nada.
 
 ## Pendiente
 

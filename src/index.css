@@ -82,12 +82,12 @@
   --shadow-md: var(--mf-shadow-md);
   --shadow-glow: var(--mf-shadow-glow);
 
-  --spacing-base: 4px;
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  /* Objetivo táctil mínimo (WCAG 2.5.8). Es el único alias de espaciado que queda.
+     Los que había con nombres `sm`, `md`, `lg` y `xl` se quitaron: Tailwind resuelve
+     `max-w-sm` contra la escala de espaciado antes que contra la de anchos, así que
+     un `--spacing-sm: 12px` convertía `max-w-sm` en 12px y cualquier tarjeta centrada
+     salía como un hilo. Para márgenes y rellenos se usa la escala numérica
+     (`p-4`, `gap-2`, `px-6`), que no colisiona con nada. */
   --spacing-touch: 44px;
 
   --radius-sm: 0.25rem;

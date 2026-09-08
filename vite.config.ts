@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin, type ViteDevServer } from 'vite'
+import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
@@ -69,21 +69,47 @@ function mswDevPlugin(): Plugin {
   }
 }
 
-const apiProxy = {
-  '/api': {
-    target: `http://${MOCK_HOST}:${MOCK_PORT}`,
-    changeOrigin: true,
-  },
-} as const
+/**
+ * El frontend siempre pide a `/api/...` en su propio origen y es el proxy quien
+ * decide a dónde va eso. Así el código de la app no sabe si detrás hay mocks o
+ * backend, y en desarrollo no hay CORS de por medio.
+ *
+ * - Sin `VITE_API_TARGET`: arranca el servidor de mocks (MSW) y apunta ahí.
+ * - Con `VITE_API_TARGET`: no arranca mocks y apunta al backend real.
+ */
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, '')
+  const backendTarget = env.VITE_API_TARGET?.trim()
+  const useMocks = !backendTarget
+  const target = backendTarget ?? `http://${MOCK_HOST}:${MOCK_PORT}`
 
-export default defineConfig({
-  plugins: [react(), tailwindcss(), mswDevPlugin()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
+  if (!useMocks) {
+    console.log(`\n  API → ${target} (backend real, mocks desactivados)\n`)
+  }
+
+  return {
+    plugins: [react(), tailwindcss(), ...(useMocks ? [mswDevPlugin()] : [])],
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
+      },
     },
-  },
-  server: {
-    proxy: { ...apiProxy },
-  },
+    server: {
+      proxy: {
+        '/api': {
+          target,
+          changeOrigin: true,
+          // El check-in llega por SSE: sin esto el proxy acumula la respuesta en un
+          // búfer y el chat aparece de golpe al final en vez de ir escribiéndose.
+          configure: (proxy) => {
+            proxy.on('proxyRes', (proxyRes) => {
+              if (proxyRes.headers['content-type']?.includes('text/event-stream')) {
+                proxyRes.headers['cache-control'] = 'no-cache, no-transform'
+              }
+            })
+          },
+        },
+      },
+    },
+  }
 })

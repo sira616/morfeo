@@ -19,14 +19,14 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-dvh items-center justify-center px-md">
+        <div className="flex min-h-dvh items-center justify-center px-4">
           <Card className="w-full max-w-sm text-center">
             <h1 className="text-headline-md text-on-surface">Algo ha fallado</h1>
-            <p className="mt-sm text-body-sm text-on-surface-variant">
+            <p className="mt-3 text-body-sm text-on-surface-variant">
               Recarga la página e inténtalo de nuevo.
             </p>
             <Button
-              className="mt-md"
+              className="mt-4"
               fullWidth
               onClick={() => window.location.assign('/')}
             >
