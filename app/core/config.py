@@ -10,14 +10,24 @@ class Settings(BaseSettings):
     # si algún día hay concurrencia real.
     DATABASE_URL: str = "sqlite:///./morfeo.db"
 
-    # Auth (Supabase Auth gestiona credenciales, tokens, verificación de email y MFA)
-    SUPABASE_URL: str = ""
-    SUPABASE_ANON_KEY: str = ""
-    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    # --- Autenticación local ---
+    # Secreto de firma de los JWT. Sin él no se arranca: generarlo al vuelo dejaría a
+    # todo el mundo fuera en cada reinicio, que es justo lo que este despliegue evita.
+    # Generar uno:  python -c "import secrets; print(secrets.token_urlsafe(48))"
+    JWT_SECRET: str = ""
+    ACCESS_TOKEN_MINUTES: int = 30
+    REFRESH_TOKEN_MINUTES: int = 60 * 24 * 30
 
-    # Solo desarrollo local: sustituye Supabase Auth por un doble en memoria
-    # (app/core/dev_auth.py) para levantar el backend sin un proyecto de Supabase.
-    LOCAL_DEV_AUTH: bool = False
+    # Cuentas con acceso al panel de /dev, por nombre de usuario.
+    ADMIN_USERNAMES: list[str] = []
+
+    # SMTP para los códigos de confirmación. Sin configurar, el código se escribe en la
+    # consola del servidor: en una app doméstica es preferible a no poder verificar.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "morfeo@localhost"
 
     # LLM: "cloud" (Claude) o "local" (Ollama). Con datos de sueño y de ánimo, el modo
     # local no es un capricho: son datos de salud y hay quien no querrá mandarlos fuera.
@@ -35,10 +45,6 @@ class Settings(BaseSettings):
     # Build del frontend a servir desde el propio backend. Vacío = solo API (que es
     # lo que se quiere en desarrollo, donde el frontend lo sirve Vite).
     FRONTEND_DIST: str = ""
-
-    # Cuentas con acceso al panel de /dev. El rol nunca llega del cliente: se deriva
-    # de esta lista, así que promocionar a alguien es editar el .env y reiniciar.
-    ADMIN_EMAILS: list[str] = []
 
     ALLOWED_ORIGINS: list[str] = [
         "http://localhost:5173",
@@ -61,34 +67,19 @@ settings = Settings()
 
 IS_PRODUCTION = settings.ENVIRONMENT.strip().lower() == "production"
 
-# LOCAL_DEV_AUTH sustituye la autenticación real por un doble en memoria: cualquier
-# email y contraseña crean cuenta. Combinarlo con producción deja el backend abierto.
-if settings.LOCAL_DEV_AUTH and IS_PRODUCTION:
+if not settings.JWT_SECRET.strip():
     raise RuntimeError(
-        "LOCAL_DEV_AUTH=true no puede usarse con ENVIRONMENT=production: sustituye la "
-        "autenticación por un doble en memoria y dejaría el backend sin auth real. "
-        "Usa ENVIRONMENT=development en local, o quita LOCAL_DEV_AUTH en el despliegue."
+        "Falta JWT_SECRET. Sin secreto de firma no se pueden emitir sesiones, y "
+        "generarlo al arrancar cerraría la sesión de todo el mundo en cada reinicio. "
+        "Genera uno con:  python -c \"import secrets; print(secrets.token_urlsafe(48))\"  "
+        "y ponlo en el .env."
     )
 
-_REQUIRED_SUPABASE_SETTINGS = ("SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY")
-_missing = [name for name in _REQUIRED_SUPABASE_SETTINGS if not getattr(settings, name).strip()]
-
-if _missing and not settings.LOCAL_DEV_AUTH:
+# 32 caracteres es poco más de 192 bits en base64url. Un secreto corto convierte la
+# firma en algo que se puede romper por fuerza bruta sin prisa.
+if len(settings.JWT_SECRET.strip()) < 32:
     raise RuntimeError(
-        "Faltan variables de entorno obligatorias de Supabase: "
-        + ", ".join(_missing)
-        + ". Sin ellas la autenticación no puede validar ni emitir tokens. "
-        "Rellénalas en .env (desarrollo) o en las variables del servicio de despliegue."
-    )
-
-if (
-    not settings.LOCAL_DEV_AUTH
-    and settings.SUPABASE_ANON_KEY.strip() == settings.SUPABASE_SERVICE_ROLE_KEY.strip()
-):
-    raise RuntimeError(
-        "SUPABASE_ANON_KEY y SUPABASE_SERVICE_ROLE_KEY son iguales. La service_role key "
-        "salta las políticas RLS de Supabase: usarla donde va la anon key deja toda la "
-        "base de datos accesible. Revisa Settings -> API en el dashboard de Supabase."
+        "JWT_SECRET es demasiado corto: hacen falta al menos 32 caracteres."
     )
 
 # `allow_credentials=True` en app/main.py hace que el navegador rechace un origen `*`,

@@ -2,36 +2,38 @@ from datetime import time
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.core.passwords import MAX_LENGTH, MIN_LENGTH
 from app.models.user import User
+
+MAX_LOGIN_LEN = 255
 
 
 class UserRegister(BaseModel):
-    """El alta solo acepta email y contraseña.
+    """El alta pide usuario y contraseña. El email es opcional.
 
     Nada de campos de perfil aquí: cualquier atributo que el cliente pueda fijar en el
-    registro es un atributo que el cliente puede falsear. El perfil se completa después,
-    autenticado, contra `/api/me`.
+    registro es un atributo que el cliente puede falsear. El perfil se completa
+    después, autenticado, contra `/api/me`.
     """
 
-    email: EmailStr
-    password: str
-
-
-class UserOut(BaseModel):
-    id: str
-    email: EmailStr
-
-    model_config = {"from_attributes": True}
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=MIN_LENGTH, max_length=MAX_LENGTH)
+    email: EmailStr | None = None
 
 
 class LoginIn(BaseModel):
-    email: EmailStr
-    password: str
+    """`login` acepta el usuario o el email: quien tiene los dos no debería recordar
+    cuál puso."""
+
+    login: str = Field(min_length=1, max_length=MAX_LOGIN_LEN)
+    password: str = Field(min_length=1, max_length=MAX_LENGTH)
 
 
 class AuthUserOut(BaseModel):
     id: str
-    email: EmailStr
+    username: str
+    email: EmailStr | None
+    emailVerified: bool
     displayName: str
     onboardingDone: bool
     isAdmin: bool
@@ -44,8 +46,10 @@ class AuthUserOut(BaseModel):
     def from_user(cls, user: User) -> "AuthUserOut":
         return cls(
             id=str(user.id),
+            username=user.username,
             email=user.email,
-            displayName=user.display_name or user.email.split("@")[0],
+            emailVerified=user.email_verified,
+            displayName=user.display_name or user.username,
             onboardingDone=user.onboarding_done,
             isAdmin=user.is_admin,
             defaultWakeTime=user.default_wake_time,
@@ -72,6 +76,26 @@ class RefreshOut(BaseModel):
 
 class MeOut(AuthUserOut):
     pass
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=MAX_LENGTH)
+    new_password: str = Field(min_length=MIN_LENGTH, max_length=MAX_LENGTH)
+
+
+class EmailIn(BaseModel):
+    email: EmailStr
+
+
+class VerifyEmailIn(BaseModel):
+    code: str = Field(min_length=4, max_length=8)
+
+
+class VerificationStartedOut(BaseModel):
+    email: EmailStr
+    # False cuando no hay SMTP: el código está en la consola del servidor. Se dice,
+    # en vez de dejar a alguien esperando un correo que no va a llegar.
+    sent_by_email: bool
 
 
 class ProfileIn(BaseModel):

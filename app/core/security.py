@@ -2,23 +2,40 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core import tokens
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.supabase_client import get_supabase
 from app.models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-def is_admin_email(email: str) -> bool:
-    return email.strip().lower() in {e.strip().lower() for e in settings.ADMIN_EMAILS if e.strip()}
+def is_admin_username(username: str) -> bool:
+    return username.strip().lower() in {
+        u.strip().lower() for u in settings.ADMIN_USERNAMES if u.strip()
+    }
+
+
+def sync_admin_flag(db: Session, user: User) -> User:
+    """Pone al día `is_admin` desde ADMIN_USERNAMES.
+
+    Se llama también al entrar y al registrarse, no solo en las peticiones
+    autenticadas: si no, la respuesta del login diría `isAdmin: false` para un
+    administrador y el frontend escondería el panel hasta el siguiente refresco.
+    """
+    admin = is_admin_username(user.username)
+    if user.is_admin != admin:
+        user.is_admin = admin
+        db.commit()
+        db.refresh(user)
+    return user
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     db: Session = Depends(get_db),
 ) -> User:
-    """Valida el bearer contra Supabase y devuelve el perfil local.
+    """Valida el access token y devuelve la cuenta.
 
     Sin credencial responde 401 y no 403: el frontend distingue ambos códigos para
     decidir si toca refrescar el token o mandar al login.
@@ -32,29 +49,19 @@ def get_current_user(
         raise credentials_exception
 
     try:
-        resp = get_supabase().auth.get_user(credentials.credentials)
-    except Exception:
-        raise credentials_exception
-    if resp is None or resp.user is None:
+        payload = tokens.decode(credentials.credentials, tokens.ACCESS)
+    except tokens.TokenError:
         raise credentials_exception
 
-    user = db.get(User, resp.user.id)
+    user = db.get(User, payload["sub"])
     if user is None:
-        # Red de seguridad: el usuario existe en Supabase pero aún no tiene fila de perfil.
-        user = User(id=resp.user.id, email=resp.user.email)
-        db.add(user)
-        db.commit()
-        db.refresh(user)
+        # Token con firma válida pero de una cuenta borrada.
+        raise credentials_exception
 
-    # El rol se recalcula en cada petición desde ADMIN_EMAILS en vez de quedarse
-    # congelado en la fila: así quitar a alguien de la lista le quita el acceso al
-    # reiniciar, sin tener que tocar la base de datos.
-    admin = is_admin_email(user.email)
-    if user.is_admin != admin:
-        user.is_admin = admin
-        db.commit()
-        db.refresh(user)
-    return user
+    # El rol se recalcula en cada petición en vez de quedarse congelado en la fila:
+    # así quitar a alguien de ADMIN_USERNAMES le retira el acceso al reiniciar, sin
+    # tener que tocar la base de datos.
+    return sync_admin_flag(db, user)
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:

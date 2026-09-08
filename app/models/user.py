@@ -10,26 +10,40 @@ from app.core.database import Base
 
 
 class User(Base):
-    """Perfil de la app. El id es el UUID de auth.users en Supabase: las credenciales
-    (contraseña, verificación de email, MFA) las gestiona Supabase Auth, no esta tabla.
+    """Cuenta y preferencias de sueño.
 
-    Los campos de sueño son las preferencias declaradas por la persona. Lo *observado*
-    (eficiencia real, latencia real) no vive aquí: se recalcula desde `sleep_nights`
-    en cada recomendación, para que no haya dos fuentes de verdad que se desincronicen.
+    La identidad es el **nombre de usuario**, no el email: esto se usa entre un par de
+    personas en una red doméstica, y obligar a dar un correo para entrar en tu propia
+    app de sueño no aporta nada.
+
+    El email es opcional y sirve para una sola cosa: recuperar la contraseña. Mientras
+    no se verifique, la cuenta funciona igual; lo que no funciona es la recuperación,
+    porque mandar un código a una dirección sin confirmar es mandárselo a cualquiera.
+
+    Lo *observado* del sueño (eficiencia y latencia reales) no vive aquí: se recalcula
+    desde `sleep_nights` en cada recomendación, para que no haya dos fuentes de verdad.
     """
 
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    # Se guarda en minúsculas: "Syreta" y "syreta" no pueden ser dos cuentas.
+    username: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    email: Mapped[Optional[str]] = mapped_column(
+        String(255), unique=True, index=True, nullable=True
+    )
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    password_hash: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Madrid")
 
     onboarding_done: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Acceso al panel de /dev. No se acepta nunca del cliente: lo fija el servidor a
-    # partir de ADMIN_EMAILS al crear o iniciar sesión (ver app/core/security.py).
+    # partir de ADMIN_USERNAMES (ver app/core/security.py).
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Hora a la que necesita levantarse entre semana. Es el ancla del cálculo: la

@@ -29,14 +29,14 @@ from app.models.user import User  # noqa: E402
 DEFAULT_DAYS = 60
 
 
-def seed(email: str, days: int = DEFAULT_DAYS, seed_value: int = 3) -> None:
+def seed(username: str, days: int = DEFAULT_DAYS, seed_value: int = 3) -> None:
     rng = random.Random(seed_value)
     today = datetime.date.today()
 
     with SessionLocal() as db:
-        user = db.scalar(select(User).where(User.email == email))
+        user = db.scalar(select(User).where(User.username == username.strip().lower()))
         if user is None:
-            raise SystemExit(f"No existe ninguna cuenta con el email {email}. Regístrala primero.")
+            raise SystemExit(f"No existe la cuenta '{username}'. Créala primero.")
 
         # Idempotente: volver a sembrar no duplica ni mezcla dos tiradas del generador.
         db.execute(delete(SleepNight).where(SleepNight.user_id == user.id))
@@ -115,10 +115,10 @@ def seed(email: str, days: int = DEFAULT_DAYS, seed_value: int = 3) -> None:
         user.onboarding_done = True
         db.commit()
 
-    print(f"Sembradas {days} noches y {days + 1} check-ins para {email}.")
+    print(f"Sembradas {days} noches y {days + 1} check-ins para {username}.")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        raise SystemExit("Uso: python scripts/sembrar_demo.py tu@email.com [dias]")
+        raise SystemExit("Uso: python scripts/sembrar_demo.py syreta [dias]")
     seed(sys.argv[1], int(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_DAYS)

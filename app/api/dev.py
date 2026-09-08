@@ -34,6 +34,7 @@ def _counts(db: Session, model, user_ids: list[str]) -> dict[str, int]:
 def _to_out(user: User, nights: int, checkins: int, recs: int, last_night, last_seen) -> DevUserOut:
     return DevUserOut(
         id=user.id,
+        username=user.username,
         email=user.email,
         display_name=user.display_name,
         is_admin=user.is_admin,

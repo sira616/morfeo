@@ -6,8 +6,10 @@ pydantic-settings==2.5.2
 email-validator==2.2.0
 python-dotenv==1.0.1
 
-# --- Auth (Supabase Auth gestiona credenciales, JWT y MFA) ---
-supabase==2.31.0
+# --- Auth local: JWT propio y hash de contraseñas ---
+# Argon2id y no bcrypt: es lo que recomienda OWASP y no trunca en silencio a 72 bytes.
+pyjwt==2.9.0
+argon2-cffi==23.1.0
 
 # --- Base de datos ---
 # SQLite basta para una app personal; psycopg2 solo hace falta al pasar a Postgres.

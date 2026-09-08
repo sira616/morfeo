@@ -5,6 +5,7 @@ import pytest
 
 from app.content.sleep_tips import SIGNAL_ALCOHOL, SIGNAL_CAFFEINE_LATE, TIPS, TIPS_BY_ID
 from app.services.tips_service import MAX_RELEVANT, TIPS_PER_DAY, pick
+from tests.conftest import auth_headers
 
 
 def test_los_identificadores_no_se_repiten():
@@ -65,14 +66,7 @@ def test_lo_relevante_tiene_tope():
 
 @pytest.fixture
 def auth_con_cafe(client):
-    import uuid
-
-    email = f"{uuid.uuid4()}@example.com"
-    client.post("/api/auth/register", json={"email": email, "password": "contrasena-larga-123"})
-    token = client.post(
-        "/api/auth/login", json={"email": email, "password": "contrasena-larga-123"}
-    ).json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers(client)
     client.put("/api/checkin", json={"last_caffeine": "19:00:00", "alcohol": True}, headers=headers)
     return headers
 
@@ -85,14 +79,8 @@ def test_la_ruta_marca_cuales_salen_por_una_senal(client, auth_con_cafe):
 
 
 def test_insights_sin_datos_no_inventa_metricas(client):
-    import uuid
-
-    email = f"{uuid.uuid4()}@example.com"
-    client.post("/api/auth/register", json={"email": email, "password": "contrasena-larga-123"})
-    token = client.post(
-        "/api/auth/login", json={"email": email, "password": "contrasena-larga-123"}
-    ).json()["access_token"]
-    body = client.get("/api/insights", headers={"Authorization": f"Bearer {token}"}).json()
+    headers = auth_headers(client)
+    body = client.get("/api/insights", headers=headers).json()
 
     # Cuentas nuevas: nulo, nunca un cero que se leería como "horario irregular".
     assert body["regularity"] is None
@@ -102,14 +90,7 @@ def test_insights_sin_datos_no_inventa_metricas(client):
 
 
 def test_insights_calcula_regularidad_con_horas_reales(client):
-    import uuid
-
-    email = f"{uuid.uuid4()}@example.com"
-    client.post("/api/auth/register", json={"email": email, "password": "contrasena-larga-123"})
-    token = client.post(
-        "/api/auth/login", json={"email": email, "password": "contrasena-larga-123"}
-    ).json()["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = auth_headers(client)
 
     hoy = date.today()
     nights = []

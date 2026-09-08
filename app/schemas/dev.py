@@ -20,7 +20,8 @@ class DevUserOut(BaseModel):
     """
 
     id: str
-    email: str
+    username: str
+    email: str | None
     display_name: str | None
     is_admin: bool
     onboarding_done: bool

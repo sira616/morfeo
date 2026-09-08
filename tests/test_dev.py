@@ -5,26 +5,19 @@ from datetime import date
 import pytest
 
 from app.core.config import settings
-
-
-def _register_and_login(client, email: str) -> dict:
-    client.post("/api/auth/register", json={"email": email, "password": "contrasena-larga-123"})
-    token = client.post(
-        "/api/auth/login", json={"email": email, "password": "contrasena-larga-123"}
-    ).json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+from tests.conftest import auth_headers
 
 
 @pytest.fixture
 def admin(client, monkeypatch):
-    email = f"admin-{uuid.uuid4()}@example.com"
-    monkeypatch.setattr(settings, "ADMIN_EMAILS", [email])
-    return _register_and_login(client, email)
+    username = f"admin{uuid.uuid4().hex[:10]}"
+    monkeypatch.setattr(settings, "ADMIN_USERNAMES", [username])
+    return auth_headers(client, username)
 
 
 @pytest.fixture
 def normal(client):
-    return _register_and_login(client, f"{uuid.uuid4()}@example.com")
+    return auth_headers(client)
 
 
 def test_quien_no_es_admin_recibe_404_y_no_403(client, normal):
@@ -39,11 +32,11 @@ def test_sin_sesion_es_401(client):
 def test_el_admin_ve_los_perfiles_registrados(client, admin, normal):
     users = client.get("/api/dev/users", headers=admin).json()
     assert len(users) >= 2
-    assert {"email", "nights", "checkins", "recommendations", "last_seen"} <= set(users[0])
+    assert {"username", "nights", "checkins", "recommendations", "last_seen"} <= set(users[0])
 
 
 def test_el_rol_no_se_acepta_del_cliente(client, normal):
-    """El flag sale de ADMIN_EMAILS en el servidor, no de nada que mande el cliente."""
+    """El flag sale de ADMIN_USERNAMES en el servidor, no de nada que mande el cliente."""
     me = client.get("/api/me", headers=normal).json()
     assert me["isAdmin"] is False
 
@@ -51,9 +44,8 @@ def test_el_rol_no_se_acepta_del_cliente(client, normal):
     assert client.get("/api/me", headers=normal).json()["isAdmin"] is False
 
 
-def test_el_detalle_trae_el_registro_de_actividad(client, admin, monkeypatch):
-    email = f"{uuid.uuid4()}@example.com"
-    headers = _register_and_login(client, email)
+def test_el_detalle_trae_el_registro_de_actividad(client, admin):
+    headers = auth_headers(client)
     client.put("/api/checkin", json={"coffees": 2, "mood": 4}, headers=headers)
     client.post(
         "/api/sleep/nights",
@@ -73,15 +65,14 @@ def test_el_detalle_trae_el_registro_de_actividad(client, admin, monkeypatch):
     detail = client.get(f"/api/dev/users/{user_id}", headers=admin).json()
 
     acciones = {e["action"] for e in detail["events"]}
-    assert {"login", "checkin", "nights"} <= acciones
+    assert {"register", "checkin", "nights"} <= acciones
     assert detail["user"]["checkins"] == 1
     assert detail["user"]["nights"] == 1
 
 
 def test_el_registro_no_guarda_lo_que_la_gente_escribe(client, admin):
     """El panel sirve para ver que la app se usa, no para leer los check-ins."""
-    email = f"{uuid.uuid4()}@example.com"
-    headers = _register_and_login(client, email)
+    headers = auth_headers(client)
     client.put(
         "/api/checkin",
         json={"notes": "un secreto que no debe salir del check-in", "mood": 2},
@@ -99,3 +90,20 @@ def test_el_registro_no_guarda_lo_que_la_gente_escribe(client, admin):
 
 def test_un_usuario_inexistente_es_404(client, admin):
     assert client.get("/api/dev/users/no-existe", headers=admin).status_code == 404
+
+
+def test_el_login_ya_dice_que_eres_admin(client, monkeypatch):
+    """Si el flag solo se calculara en la primera petición autenticada, la respuesta
+    del login diría que no eres admin y el frontend escondería el panel."""
+    username = f"admin{uuid.uuid4().hex[:10]}"
+    monkeypatch.setattr(settings, "ADMIN_USERNAMES", [username])
+
+    alta = client.post(
+        "/api/auth/register", json={"username": username, "password": "ContrasenaLarga123"}
+    ).json()
+    assert alta["user"]["isAdmin"] is True
+
+    entrada = client.post(
+        "/api/auth/login", json={"login": username, "password": "ContrasenaLarga123"}
+    ).json()
+    assert entrada["user"]["isAdmin"] is True

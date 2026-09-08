@@ -108,16 +108,21 @@ cp .env.example .env
 uvicorn app.main:app --reload
 ```
 
-Con el `.env.example` tal cual (`LOCAL_DEV_AUTH=true`, SQLite) arranca sin Supabase y
-sin clave de LLM. La autenticación entonces **no es real**: cualquier email y
-contraseña crean cuenta, y el backend se niega a arrancar si eso se combina con
-`ENVIRONMENT=production`.
+Hace falta un `JWT_SECRET` en el `.env` o el backend no arranca. Se genera con:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+No se genera solo al arrancar a propósito: un secreto nuevo invalida las firmas
+anteriores, así que cerraría la sesión de todo el mundo en cada reinicio, que es justo
+lo que este despliegue evita.
 
 ```bash
 pytest -q
 ```
 
-Esperado: **94 passed**, sin red y sin claves.
+Esperado: **133 passed**, sin red y sin claves.
 
 ## Conectar con el frontend
 
@@ -146,7 +151,9 @@ entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin c
 
 | Ruta | Qué hace |
 |---|---|
-| `POST /api/auth/register` · `login` · `refresh` · `logout` | Supabase Auth |
+| `POST /api/auth/register` · `login` · `refresh` · `logout` | Autenticación local con JWT |
+| `POST /api/auth/change-password` | Cambia la clave y cierra todas las sesiones |
+| `POST /api/auth/email` · `email/verify` | Añadir email y confirmarlo con un código |
 | `GET`/`PATCH /api/me` | Perfil: hora de despertar, necesidad de sueño, latencia declarada |
 | `POST /api/sleep/nights` | Alta de noches. Idempotente por fecha |
 | `GET /api/sleep/nights?days=30` | Histórico |
@@ -210,10 +217,46 @@ venv\Scripts\python.exe scripts/sembrar_demo.py tu@email.com
 Escribe en la base de datos y no por la API a propósito: sesenta noches seguidas por
 HTTP chocan con el rate limiting, que está ahí por buenos motivos.
 
+## Autenticación
+
+Local, sin proveedor externo. **La identidad es el nombre de usuario**, no el email:
+esto se usa entre un par de personas en una red doméstica, y pedir un correo para
+entrar en tu propia app de sueño no aporta nada.
+
+El email es opcional y sirve para una sola cosa: recuperar la contraseña. Mientras no
+se verifique, la cuenta funciona igual. Una cuenta sin email nace verificada, porque no
+tiene nada que verificar y arrastrar un aviso que no se puede quitar sería absurdo.
+
+- **Contraseñas** con Argon2id, no bcrypt: es lo que recomienda OWASP y no trunca en
+  silencio a 72 bytes. Política de 12 caracteres con mayúscula, minúscula y número;
+  **sin exigir carácter especial**, porque empuja a `Contraseña1!` y la longitud es lo
+  que de verdad cuesta de adivinar.
+- **JWT propio**: access de 30 minutos sin estado, y refresh de 30 días **con** estado.
+  El `jti` del refresh vive en `refresh_tokens`, y sin esa tabla cerrar sesión sería
+  una mentira. Al refrescar se rota y se anula el anterior: sin rotación, un refresh
+  robado sirve un mes en paralelo a la sesión legítima.
+- El `type` va en las claims. Sin él, un refresh serviría como access y duraría treinta
+  días en vez de treinta minutos.
+- Entrar con usuario inexistente y con contraseña mala dan **el mismo mensaje**:
+  distinguirlos convierte el formulario en un buscador de cuentas.
+- El código de confirmación **no viaja en la respuesta HTTP**. Si lo hiciera, verificar
+  un email sería un trámite que cualquiera completa sin acceso a ese correo. Sin SMTP
+  configurado sale por la consola del servidor.
+
+### Cuentas
+
+```bash
+venv\Scripts\python.exe scripts/crear_cuenta.py syreta
+venv\Scripts\python.exe scripts/crear_cuenta.py syreta --reset
+```
+
+Genera una contraseña que cumple la política y la imprime **una sola vez**: en la base
+de datos solo queda el hash. Si se pierde, se cambia; no se recupera.
+
 ## Panel de /dev
 
 Quién se ha registrado, cuánto registra cada uno y un diario de acciones por usuario.
-Las cuentas con acceso salen de `ADMIN_EMAILS`; el rol **nunca** llega del cliente y se
+Las cuentas con acceso salen de `ADMIN_USERNAMES`; el rol **nunca** llega del cliente y se
 recalcula en cada petición, así que quitar a alguien de la lista le quita el acceso sin
 tocar la base de datos.
 

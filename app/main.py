@@ -11,6 +11,8 @@ from app.core.spa import mount_spa
 from app.models import (  # noqa: F401 — registran los modelos en Base.metadata
     AuditEvent,
     BedtimeRecommendation,
+    EmailVerification,
+    RefreshToken,
     Checkin,
     DailyMetrics,
     SleepNight,
@@ -20,13 +22,6 @@ from app.models import (  # noqa: F401 — registran los modelos en Base.metadat
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.LOCAL_DEV_AUTH:
-        print(
-            "\n" + "!" * 78 + "\n"
-            "!!  LOCAL_DEV_AUTH=true — Supabase Auth sustituido por un doble EN MEMORIA.\n"
-            "!!  Los usuarios se pierden al reiniciar y los tokens no son JWT reales.\n"
-            "!!  Solo para desarrollo local: NUNCA en un despliegue.\n" + "!" * 78 + "\n"
-        )
     Base.metadata.create_all(bind=engine)
     yield
 

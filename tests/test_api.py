@@ -1,28 +1,16 @@
 """Tests de extremo a extremo sobre la API. Supabase Auth está doblado en conftest,
 así que corren sin red y sin claves."""
 import json
-import uuid
 from datetime import date, timedelta
 
 import pytest
 
-
-def _register_and_login(client, email: str | None = None) -> str:
-    email = email or f"{uuid.uuid4()}@example.com"
-    client.post("/api/auth/register", json={"email": email, "password": "contrasena-larga-123"})
-    resp = client.post("/api/auth/login", json={"email": email, "password": "contrasena-larga-123"})
-    assert resp.status_code == 200
-    return resp.json()["access_token"]
+from tests.conftest import auth_headers
 
 
 @pytest.fixture
-def token(client):
-    return _register_and_login(client)
-
-
-@pytest.fixture
-def auth(token):
-    return {"Authorization": f"Bearer {token}"}
+def auth(client):
+    return auth_headers(client)
 
 
 def test_health():
@@ -33,6 +21,7 @@ def test_health():
 
 def test_el_perfil_recien_creado_trae_los_valores_por_defecto(client, auth):
     me = client.get("/api/me", headers=auth).json()
+    assert me["emailVerified"] is True  # sin email no hay nada que verificar
     assert me["defaultWakeTime"] == "07:00:00"
     assert me["sleepNeedMinutes"] == 480
     assert me["onboardingDone"] is False
@@ -138,7 +127,7 @@ def test_marcar_seguida_una_recomendacion_inexistente_es_404(client, auth):
 
 
 def test_no_se_ven_las_noches_de_otra_persona(client):
-    otra = {"Authorization": f"Bearer {_register_and_login(client)}"}
+    otra = auth_headers(client)
     client.post(
         "/api/sleep/nights",
         json={
@@ -152,30 +141,6 @@ def test_no_se_ven_las_noches_de_otra_persona(client):
         },
         headers=otra,
     )
-    mias = {"Authorization": f"Bearer {_register_and_login(client)}"}
+    mias = auth_headers(client)
     nights = client.get("/api/sleep/nights?days=365", headers=mias).json()
     assert nights == []
-
-
-def test_email_con_perfil_existente_da_409_y_no_500(client):
-    """La cuenta se borró del proveedor de auth pero la fila de perfil sobrevivió.
-
-    Antes reventaba con un IntegrityError de SQLAlchemy y un 500 con traza. En
-    desarrollo pasa solo con reiniciar el backend, porque LOCAL_DEV_AUTH guarda las
-    cuentas en memoria y la base de datos no se va con ellas.
-    """
-    import app.api.auth as auth_module
-
-    email = f"{uuid.uuid4()}@example.com"
-    assert client.post(
-        "/api/auth/register", json={"email": email, "password": "contrasena-larga-123"}
-    ).status_code == 201
-
-    # Se olvida la cuenta en el proveedor, dejando huérfana la fila de perfil.
-    auth_module.get_supabase().auth.users_by_email.pop(email)
-
-    resp = client.post(
-        "/api/auth/register", json={"email": email, "password": "otra-contrasena-123"}
-    )
-    assert resp.status_code == 409
-    assert "Ya existe un perfil" in resp.json()["detail"]
