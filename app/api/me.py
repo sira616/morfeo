@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.auth import AuthUserOut, MeOut, ProfileIn
+from app.services import audit_service
 
 router = APIRouter(prefix="/api/me", tags=["me"])
 
@@ -27,4 +28,5 @@ def patch_me(payload: ProfileIn, db: Session = Depends(get_db), user: User = Dep
     user.onboarding_done = True
     db.commit()
     db.refresh(user)
+    audit_service.record(db, user, "profile", ", ".join(sorted(payload.model_dump(exclude_unset=True))))
     return AuthUserOut.from_user(user)

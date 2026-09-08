@@ -10,6 +10,7 @@ from app.core.rate_limit import RateLimiter
 from app.core.security import bearer_scheme
 from app.core.supabase_client import get_supabase, get_supabase_admin
 from app.models.user import User
+from app.services import audit_service
 from app.schemas.auth import (
     AuthUserOut,
     LoginIn,
@@ -97,6 +98,7 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+    audit_service.record(db, user, "login")
     return TokenPair(
         access_token=resp.session.access_token,
         refresh_token=resp.session.refresh_token,

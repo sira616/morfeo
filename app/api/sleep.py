@@ -12,7 +12,7 @@ from app.core.rate_limit import RateLimiter
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.sleep import DailyMetricsIn, ImportIn, NightOut, NightsIn
-from app.services import sleep_service
+from app.services import audit_service, sleep_service
 from app.wearables.base import DaySample, NightSample
 from app.wearables.fileimport import ImportError_, parse_nights
 
@@ -58,6 +58,7 @@ def put_nights(
     written = sleep_service.upsert_nights(
         db, user, [_to_sample(n) for n in payload.nights], source="manual"
     )
+    audit_service.record(db, user, "nights", f"{written} noches")
     return {"written": written}
 
 
@@ -107,6 +108,7 @@ def import_export(
     written = sleep_service.upsert_nights(db, user, nights, source="import")
     user.wearable_provider = user.wearable_provider or "import"
     db.commit()
+    audit_service.record(db, user, "import", f"{written} noches en {payload.format}")
     return {"written": written, "from": nights[0].night_of if nights else None}
 
 
@@ -134,4 +136,5 @@ def put_metrics(
         ),
         source=payload.source,
     )
+    audit_service.record(db, user, "metrics", payload.day.isoformat())
     return {"ok": True}

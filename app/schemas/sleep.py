@@ -71,7 +71,11 @@ class DailyMetricsIn(BaseModel):
 
 class CheckinIn(BaseModel):
     """Los campos que el reloj no puede medir. Llegan del formulario o del extractor
-    del LLM; el motor no distingue el origen."""
+    del LLM; el motor no distingue el origen.
+
+    Los rangos son topes de cordura, no juicios: 40 cafés o 20 h de siesta son un dedo
+    resbalado o un cliente roto, y dejarlos entrar estropea las medias del histórico.
+    """
 
     day: date | None = None
     mood: int | None = Field(default=None, ge=1, le=5)
@@ -81,6 +85,20 @@ class CheckinIn(BaseModel):
     last_caffeine: time | None = None
     alcohol: bool = False
     wake_target: time | None = None
+
+    coffees: int = Field(default=0, ge=0, le=20)
+    alcohol_units: int = Field(default=0, ge=0, le=30)
+    # Días desde el último porro. 0 = hoy. Por encima de un mes deja de importar.
+    cannabis_days_ago: int | None = Field(default=None, ge=0, le=365)
+
+    exercise_minutes: int = Field(default=0, ge=0, le=MAX_MINUTES)
+    exercise_intensity: Intensity = "none"
+    exercise_end: time | None = None
+
+    meals: int | None = Field(default=None, ge=0, le=12)
+    last_meal: time | None = None
+
+    notes: str | None = Field(default=None, max_length=1000)
     transcript: str | None = Field(default=None, max_length=MAX_TRANSCRIPT_CHARS)
 
 

@@ -19,12 +19,22 @@ class RegularityOut(BaseModel):
     nights: int
 
 
-class SocialJetlagOut(BaseModel):
-    minutes: int
-    weekday_midpoint_minutes: int
-    weekend_midpoint_minutes: int
-    weekday_nights: int
-    weekend_nights: int
+class AssociationOut(BaseModel):
+    """Una comparación entre las noches con un factor y las noches sin él.
+
+    Es asociación, no causa: son los datos de una sola persona y sin control de nada.
+    El frontend lo dice con esas palabras.
+    """
+
+    key: str
+    label: str
+    nights_with: int
+    nights_without: int
+    mean_sleep_with: int
+    mean_sleep_without: int
+    mean_efficiency_with: float
+    mean_efficiency_without: float
+    delta_sleep_minutes: int
 
 
 class AdherenceNight(BaseModel):
@@ -42,10 +52,11 @@ class AdherenceOut(BaseModel):
 
 
 class InsightsOut(BaseModel):
-    # `regularity` y `social_jetlag` van a null cuando faltan noches con horas medidas.
-    # El frontend lo dibuja como "faltan datos", nunca como un cero.
+    # `regularity` va a null cuando faltan noches con horas medidas. El frontend lo
+    # dibuja como "faltan datos", nunca como un cero.
     regularity: RegularityOut | None
-    social_jetlag: SocialJetlagOut | None
+    # Vacío mientras no haya check-ins suficientes a los dos lados de cada factor.
+    associations: list[AssociationOut]
     adherence: AdherenceOut
     heatmap: list[HeatmapNight]
 

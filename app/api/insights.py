@@ -11,9 +11,9 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.insights import (
     AdherenceOut,
+    AssociationOut,
     InsightsOut,
     RegularityOut,
-    SocialJetlagOut,
     TipOut,
     TipsOut,
 )
@@ -26,11 +26,13 @@ router = APIRouter(prefix="/api", tags=["insights"])
 def get_insights(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     today = date.today()
     reg = insights_service.regularity(db, user, today)
-    jetlag = insights_service.social_jetlag(db, user, today)
 
     return InsightsOut(
         regularity=RegularityOut(**reg.__dict__) if reg else None,
-        social_jetlag=SocialJetlagOut(**jetlag.__dict__) if jetlag else None,
+        associations=[
+            AssociationOut(**a.__dict__, delta_sleep_minutes=a.delta_sleep_minutes)
+            for a in insights_service.associations(db, user, today)
+        ],
         adherence=AdherenceOut(**insights_service.adherence(db, user, today)),
         heatmap=insights_service.heatmap(db, user, today),
     )

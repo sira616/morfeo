@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, bedtime, checkin, insights, me, sleep
+from app.api import auth, bedtime, checkin, dev, insights, me, sleep
 from app.core.config import IS_PRODUCTION, settings
 from app.core.database import Base, engine
 from app.models import (  # noqa: F401 — registran los modelos en Base.metadata
+    AuditEvent,
     BedtimeRecommendation,
     Checkin,
     DailyMetrics,
@@ -59,6 +60,7 @@ app.include_router(sleep.router)
 app.include_router(checkin.router)
 app.include_router(bedtime.router)
 app.include_router(insights.router)
+app.include_router(dev.router)
 
 
 @app.get("/health")

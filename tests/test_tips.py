@@ -96,7 +96,7 @@ def test_insights_sin_datos_no_inventa_metricas(client):
 
     # Cuentas nuevas: nulo, nunca un cero que se leería como "horario irregular".
     assert body["regularity"] is None
-    assert body["social_jetlag"] is None
+    assert body["associations"] == []
     assert body["adherence"]["streak"] == 0
     assert body["heatmap"] == []
 

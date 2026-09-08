@@ -61,10 +61,30 @@ LATE_EXERCISE_HOURS = 1
 LATE_EXERCISE_LATENCY_PENALTY = 15
 LATE_EXERCISE_INTENSITIES = ("hard",)
 
-# La cafeína tiene una vida media de 5-6 h: la tomada por la tarde sigue en sangre
-# a la hora de acostarse.
-CAFFEINE_CUTOFF_HOURS = 8
+# Cafeína: la ventana depende de la **dosis**, no solo de la hora.
+#
+# En el ensayo cruzado de 2024, 100 mg (≈1 café) tomados 4 h antes no tuvieron efecto,
+# mientras que 400 mg (≈4 cafés) alteraron la arquitectura del sueño incluso 12 h
+# antes. Su vida media son 3-6 h, pero el rango real entre personas va de 2 a 10.
+CAFFEINE_HIGH_DOSE_COFFEES = 4
+CAFFEINE_LOW_DOSE_COFFEES = 1
+CAFFEINE_CUTOFF_HOURS_HIGH = 12
+CAFFEINE_CUTOFF_HOURS_MEDIUM = 8
+CAFFEINE_CUTOFF_HOURS_LOW = 4
 CAFFEINE_LATENCY_PENALTY = 10
+
+# Cannabis. Lo que la evidencia sostiene con firmeza no es fumar, es **dejarlo**: la
+# abstinencia recorta el sueño total y alarga la conciliación durante la primera
+# semana, con rebote de REM entre los días 2 y 9. La supresión de REM durante el
+# consumo es de evidencia mixta a dosis bajas, así que no mueve ninguna cifra: solo
+# deja nota.
+CANNABIS_WITHDRAWAL_DAYS = 7
+CANNABIS_WITHDRAWAL_LATENCY_PENALTY = 15
+
+# Cenar pegado a la cama multiplica los despertares y baja la eficiencia. El American
+# College of Gastroenterology recomienda dejar 2-3 h.
+LATE_MEAL_HOURS = 3
+LATE_MEAL_EFFICIENCY_PENALTY = 0.02
 
 # El alcohol acorta la latencia y fragmenta la segunda mitad de la noche: no se
 # compensa alargando el sueño, se avisa y se baja la eficiencia esperada.
@@ -101,7 +121,12 @@ class DaySignals:
     nap_minutes: int = 0
     mood: int | None = None  # 1-5, del check-in
     last_caffeine: time | None = None
+    # Número de cafés del día. Decide la ventana en que la cafeína sigue importando.
+    coffees: int = 0
     alcohol: bool = False
+    # Días desde el último porro. 0 = hoy; None = no aplica.
+    cannabis_days_ago: int | None = None
+    last_meal: time | None = None
 
 
 @dataclass(frozen=True)
@@ -145,6 +170,37 @@ def _hours_between(earlier: time, later: time) -> float:
     if b < a:
         b += timedelta(days=1)
     return (b - a).total_seconds() / 3600
+
+
+# Lo consumido justo *después* de la hora recomendada cuenta como tardío: si la cama
+# es a las 22:35, cenar a las 23:00 no está a veintitrés horas de distancia.
+AFTER_BEDTIME_HOURS = 3
+
+
+def _too_close_to(moment: time, bedtime: time, hours: float) -> bool:
+    """¿`moment` cae lo bastante cerca de la hora de acostarse como para importar?
+
+    Cuenta lo que pasa dentro de las `hours` previas y también lo que pasa justo
+    después. La aritmética circular es traicionera aquí: medir solo "hacia delante"
+    convierte una cena veinticinco minutos posterior a la cama en una cena de hace casi
+    un día, y la deja pasar.
+    """
+    gap = _hours_between(moment, bedtime)
+    return gap < hours or gap > 24 - AFTER_BEDTIME_HOURS
+
+
+def _caffeine_cutoff_hours(coffees: int) -> int:
+    """Cuántas horas antes de acostarse sigue importando el último café.
+
+    `coffees == 0` con una hora registrada significa que hay cafeína pero no sabemos
+    cuánta: se asume dosis media, que es el supuesto prudente. Cero de verdad no llega
+    hasta aquí, porque entonces tampoco hay hora.
+    """
+    if coffees >= CAFFEINE_HIGH_DOSE_COFFEES:
+        return CAFFEINE_CUTOFF_HOURS_HIGH
+    if 0 < coffees <= CAFFEINE_LOW_DOSE_COFFEES:
+        return CAFFEINE_CUTOFF_HOURS_LOW
+    return CAFFEINE_CUTOFF_HOURS_MEDIUM
 
 
 def _confidence(nights_observed: int) -> str:
@@ -241,14 +297,44 @@ def recommend_bedtime(
             "Eso no se compensa acostándose antes."
         )
 
-    if signals.last_caffeine is not None:
+    if signals.last_meal is not None:
         provisional_bedtime = _shift(wake_target, -round(target / efficiency))
-        if _hours_between(signals.last_caffeine, provisional_bedtime) < CAFFEINE_CUTOFF_HOURS:
-            latency += CAFFEINE_LATENCY_PENALTY
+        if _too_close_to(signals.last_meal, provisional_bedtime, LATE_MEAL_HOURS):
+            efficiency = max(0.5, efficiency - LATE_MEAL_EFFICIENCY_PENALTY)
             notes.append(
-                f"Cafeína a las {signals.last_caffeine.strftime('%H:%M')}: con una vida media de "
-                f"5-6 h todavía estará activa. Cuenta {CAFFEINE_LATENCY_PENALTY} min más para "
-                f"conciliar."
+                f"Cenaste a las {signals.last_meal.strftime('%H:%M')}, menos de "
+                f"{LATE_MEAL_HOURS} h antes de acostarte. Comer pegado a la cama multiplica los "
+                f"despertares; no impide dormir, pero fragmenta la noche."
+            )
+
+    if signals.last_caffeine is not None:
+        cutoff = _caffeine_cutoff_hours(signals.coffees)
+        provisional_bedtime = _shift(wake_target, -round(target / efficiency))
+        if _too_close_to(signals.last_caffeine, provisional_bedtime, cutoff):
+            latency += CAFFEINE_LATENCY_PENALTY
+            dose = (
+                f"{signals.coffees} cafés" if signals.coffees > 1 else "la cafeína del día"
+            )
+            notes.append(
+                f"Cafeína a las {signals.last_caffeine.strftime('%H:%M')}: con {dose}, la ventana "
+                f"en que sigue afectando son unas {cutoff} h. Cuenta "
+                f"{CAFFEINE_LATENCY_PENALTY} min más para conciliar."
+            )
+
+    if signals.cannabis_days_ago is not None:
+        if signals.cannabis_days_ago == 0:
+            notes.append(
+                "Con cannabis te dormirás antes, pero suprime el REM y la segunda mitad de la "
+                "noche se resiente. No se compensa con más tiempo en la cama."
+            )
+        elif signals.cannabis_days_ago <= CANNABIS_WITHDRAWAL_DAYS:
+            latency += CANNABIS_WITHDRAWAL_LATENCY_PENALTY
+            notes.append(
+                f"Llevas {signals.cannabis_days_ago} "
+                f"{'día' if signals.cannabis_days_ago == 1 else 'días'} sin fumar. Si venías "
+                f"haciéndolo a diario, esta es la peor semana: la abstinencia alarga la "
+                f"conciliación y recorta el sueño, con rebote de sueños vívidos entre el segundo "
+                f"y el noveno día. Pasa sola."
             )
 
     mode = "normal"

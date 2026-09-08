@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import time
+from datetime import datetime, time
 from typing import Optional
 
-from sqlalchemy import Boolean, Float, Integer, String, Time
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Time, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -22,10 +22,15 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Madrid")
 
     onboarding_done: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Acceso al panel de /dev. No se acepta nunca del cliente: lo fija el servidor a
+    # partir de ADMIN_EMAILS al crear o iniciar sesión (ver app/core/security.py).
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Hora a la que necesita levantarse entre semana. Es el ancla del cálculo: la
     # recomendación se construye hacia atrás desde aquí.

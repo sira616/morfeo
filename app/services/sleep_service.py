@@ -136,16 +136,29 @@ def build_signals(db: DbSession, user: User, day: date) -> DaySignals:
         # El check-in va de 1 a 5; la escala del motor es 0-100.
         stress = round((checkin.perceived_stress - 1) * 25)
 
+    # El ejercicio puede venir del reloj o declararse en el check-in. Gana el reloj
+    # cuando lo trae: es una medida, no un recuerdo.
+    exercise_minutes = metrics.exercise_minutes if metrics and metrics.exercise_minutes else 0
+    exercise_intensity = metrics.exercise_intensity if metrics and metrics.exercise_minutes else "none"
+    exercise_end = metrics.exercise_end if metrics and metrics.exercise_minutes else None
+    if not exercise_minutes and checkin and checkin.exercise_minutes:
+        exercise_minutes = checkin.exercise_minutes
+        exercise_intensity = checkin.exercise_intensity
+        exercise_end = checkin.exercise_end
+
     return DaySignals(
         sleep_debt_minutes=debt,
         stress=stress,
-        exercise_minutes=metrics.exercise_minutes if metrics else 0,
-        exercise_intensity=metrics.exercise_intensity if metrics else "none",
-        exercise_end=metrics.exercise_end if metrics else None,
+        exercise_minutes=exercise_minutes,
+        exercise_intensity=exercise_intensity,
+        exercise_end=exercise_end,
         nap_minutes=checkin.nap_minutes if checkin else 0,
         mood=checkin.mood if checkin else None,
         last_caffeine=checkin.last_caffeine if checkin else None,
-        alcohol=bool(checkin.alcohol) if checkin else False,
+        coffees=checkin.coffees if checkin else 0,
+        alcohol=bool(checkin.alcohol or checkin.alcohol_units) if checkin else False,
+        cannabis_days_ago=checkin.cannabis_days_ago if checkin else None,
+        last_meal=checkin.last_meal if checkin else None,
     )
 
 

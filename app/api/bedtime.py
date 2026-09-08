@@ -13,7 +13,7 @@ from app.core.security import get_current_user
 from app.models.sleep import BedtimeRecommendation
 from app.models.user import User
 from app.schemas.sleep import FactorOut, FollowedIn, RecommendationOut
-from app.services import sleep_service
+from app.services import audit_service, sleep_service
 
 router = APIRouter(prefix="/api/bedtime", tags=["bedtime"])
 
@@ -110,3 +110,4 @@ def mark_followed(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sin recomendación ese día")
     row.followed = payload.followed
     db.commit()
+    audit_service.record(db, user, "followed", f"{day}: {'sí' if payload.followed else 'no'}")

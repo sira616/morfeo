@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # proveedores entran por /api/sleep/import o por la API manual.
     OURA_ACCESS_TOKEN: str = ""
 
+    # Cuentas con acceso al panel de /dev. El rol nunca llega del cliente: se deriva
+    # de esta lista, así que promocionar a alguien es editar el .env y reiniciar.
+    ADMIN_EMAILS: list[str] = []
+
     ALLOWED_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

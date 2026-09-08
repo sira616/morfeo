@@ -28,15 +28,6 @@ class Regularity:
     nights: int
 
 
-@dataclass(frozen=True)
-class SocialJetlag:
-    minutes: int
-    weekday_midpoint_minutes: int
-    weekend_midpoint_minutes: int
-    weekday_nights: int
-    weekend_nights: int
-
-
 def midpoint_minutes(sleep_start: datetime, sleep_end: datetime) -> int:
     """Punto medio del sueño, en minutos desde medianoche.
 
@@ -80,38 +71,6 @@ def regularity(midpoints: list[int]) -> Regularity | None:
     )
 
 
-def circular_distance(a: float, b: float) -> float:
-    """Distancia más corta entre dos horas del día, en minutos (0 a 720)."""
-    raw = abs(a - b) % MINUTES_PER_DAY
-    return min(raw, MINUTES_PER_DAY - raw)
-
-
-def social_jetlag(midpoints_by_day: list[tuple[date, int]]) -> SocialJetlag | None:
-    """Desfase entre el horario de diario y el del fin de semana.
-
-    Es la diferencia entre los puntos medios de sueño de unos días y otros: dormir de
-    viernes a domingo con dos horas de retraso equivale a cruzar dos husos horarios
-    cada semana, de ahí el nombre.
-
-    Se agrupa por la noche en que uno se acuesta: viernes y sábado cuentan como fin de
-    semana, porque es cuando se trasnocha, no cuando se madruga.
-    """
-    weekday = [m for day, m in midpoints_by_day if day.weekday() < 4 or day.weekday() == 6]
-    weekend = [m for day, m in midpoints_by_day if day.weekday() in (4, 5)]
-    if len(weekday) < 3 or len(weekend) < 2:
-        return None
-
-    weekday_mean, _ = _circular_mean_and_sd(weekday)
-    weekend_mean, _ = _circular_mean_and_sd(weekend)
-    return SocialJetlag(
-        minutes=round(circular_distance(weekday_mean, weekend_mean)),
-        weekday_midpoint_minutes=round(weekday_mean) % MINUTES_PER_DAY,
-        weekend_midpoint_minutes=round(weekend_mean) % MINUTES_PER_DAY,
-        weekday_nights=len(weekday),
-        weekend_nights=len(weekend),
-    )
-
-
 def current_streak(followed_by_day: list[tuple[date, bool | None]]) -> int:
     """Noches seguidas siguiendo la recomendación, contando desde la más reciente.
 
@@ -134,3 +93,80 @@ def adherence_rate(followed_by_day: list[tuple[date, bool | None]]) -> float | N
     if not answered:
         return None
     return round(sum(answered) / len(answered), 3)
+
+
+# --- Qué acompaña a tus mejores noches -----------------------------------------
+# Con menos noches de estas a cada lado la diferencia es ruido y no se enseña.
+MIN_NIGHTS_PER_SIDE = 3
+# Por debajo de esta diferencia tampoco vale la pena decir nada: veinte minutos
+# entran dentro de la variación normal entre noches.
+MIN_MEANINGFUL_DELTA_MINUTES = 20
+
+FACTOR_LABELS: dict[str, str] = {
+    "cafe_tarde": "café después de las cuatro",
+    "muchos_cafes": "tres cafés o más",
+    "alcohol": "alcohol",
+    "cannabis": "cannabis",
+    "ejercicio": "media hora de ejercicio",
+    "siesta": "siesta",
+    "cena_tarde": "cenar tarde",
+    "animo_bajo": "ánimo bajo",
+}
+
+
+@dataclass(frozen=True)
+class FactorAssociation:
+    key: str
+    label: str
+    nights_with: int
+    nights_without: int
+    mean_sleep_with: int
+    mean_sleep_without: int
+    mean_efficiency_with: float
+    mean_efficiency_without: float
+
+    @property
+    def delta_sleep_minutes(self) -> int:
+        return self.mean_sleep_with - self.mean_sleep_without
+
+
+def associations(
+    samples: list[tuple[set[str], int, float]],
+    min_per_side: int = MIN_NIGHTS_PER_SIDE,
+) -> list[FactorAssociation]:
+    """Compara las noches con cada factor contra las noches sin él.
+
+    Es una **asociación, no una causa**, y el nombre de la función no lo disimula: son
+    los datos de una sola persona, sin control de nada. Sirve para mirar dónde fijarse,
+    no para concluir.
+
+    Cada muestra es (factores presentes ese día, minutos dormidos esa noche,
+    eficiencia). Se descartan los factores que no tengan suficientes noches a los dos
+    lados, porque con dos noches cualquier diferencia es ruido.
+    """
+    if not samples:
+        return []
+
+    found: list[FactorAssociation] = []
+    for key in FACTOR_LABELS:
+        with_it = [(sleep, eff) for factors, sleep, eff in samples if key in factors]
+        without_it = [(sleep, eff) for factors, sleep, eff in samples if key not in factors]
+        if len(with_it) < min_per_side or len(without_it) < min_per_side:
+            continue
+
+        found.append(
+            FactorAssociation(
+                key=key,
+                label=FACTOR_LABELS[key],
+                nights_with=len(with_it),
+                nights_without=len(without_it),
+                mean_sleep_with=round(sum(s for s, _ in with_it) / len(with_it)),
+                mean_sleep_without=round(sum(s for s, _ in without_it) / len(without_it)),
+                mean_efficiency_with=round(sum(e for _, e in with_it) / len(with_it), 3),
+                mean_efficiency_without=round(sum(e for _, e in without_it) / len(without_it), 3),
+            )
+        )
+
+    # Lo que más mueve la aguja primero, en cualquier dirección.
+    relevant = [f for f in found if abs(f.delta_sleep_minutes) >= MIN_MEANINGFUL_DELTA_MINUTES]
+    return sorted(relevant, key=lambda f: abs(f.delta_sleep_minutes), reverse=True)

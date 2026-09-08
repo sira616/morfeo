@@ -111,6 +111,27 @@ class Checkin(Base):
     alcohol: Mapped[bool] = mapped_column(Boolean, default=False)
     wake_target: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
 
+    # --- Consumo y hábitos del día ---------------------------------------------
+    # La dosis importa tanto como la hora: en el ensayo de 2024, 100 mg de cafeína
+    # (≈1 café) cuatro horas antes no hicieron nada, y 400 mg (≈4) alteraron el sueño
+    # tomados hasta doce horas antes.
+    coffees: Mapped[int] = mapped_column(Integer, default=0)
+    alcohol_units: Mapped[int] = mapped_column(Integer, default=0)
+
+    # Días desde el último porro. 0 = hoy; None = no aplica.
+    # El efecto consistente en la evidencia no es fumar, es dejarlo: la abstinencia
+    # alarga la conciliación y recorta el sueño durante la primera semana.
+    cannabis_days_ago: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    exercise_minutes: Mapped[int] = mapped_column(Integer, default=0)
+    exercise_intensity: Mapped[str] = mapped_column(String(16), default="none")
+    exercise_end: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+
+    meals: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    last_meal: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
+
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     transcript: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     extracted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON crudo del LLM
 

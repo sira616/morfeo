@@ -16,7 +16,7 @@ from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.checkin import CheckinStreamIn
 from app.schemas.sleep import CheckinIn
-from app.services import checkin_service, sleep_service
+from app.services import audit_service, checkin_service, sleep_service
 
 router = APIRouter(prefix="/api/checkin", tags=["checkin"])
 
@@ -45,6 +45,7 @@ def put_checkin(
     day = payload.day or date.today()
     fields = payload.model_dump(exclude={"day"}, exclude_unset=True)
     checkin = sleep_service.upsert_checkin(db, user, day, fields)
+    audit_service.record(db, user, "checkin", ", ".join(sorted(fields)))
     return {"day": checkin.day, "saved": sorted(fields)}
 
 

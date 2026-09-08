@@ -314,3 +314,73 @@ def test_el_ejercicio_moderado_tardio_no_penaliza():
         DaySignals(exercise_minutes=60, exercise_intensity="moderate", exercise_end=time(22, 0)),
     )
     assert rec.onset_latency_minutes == 20
+
+
+def test_la_ventana_de_la_cafeina_depende_de_la_dosis():
+    """100 mg cuatro horas antes no hicieron nada en el ensayo de 2024; 400 mg sí,
+    incluso doce horas antes. Un café a las cinco y cuatro cafés a las cinco no son
+    el mismo problema."""
+    un_cafe = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(last_caffeine=time(17, 0), coffees=1),
+    )
+    assert un_cafe.onset_latency_minutes == 20
+    assert un_cafe.notes == []
+
+    cuatro_cafes = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(last_caffeine=time(12, 0), coffees=4),
+    )
+    assert cuatro_cafes.onset_latency_minutes == 30
+    assert any("12 h" in n for n in cuatro_cafes.notes)
+
+
+def test_dejar_de_fumar_alarga_la_conciliacion():
+    """Lo consistente en la evidencia no es fumar, es dejarlo: la abstinencia recorta
+    el sueño y alarga la conciliación durante la primera semana."""
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(cannabis_days_ago=3),
+    )
+    assert rec.onset_latency_minutes == 35
+    assert any("sin fumar" in n for n in rec.notes)
+
+
+def test_fumar_hoy_deja_nota_pero_no_mueve_la_hora():
+    """La supresión de REM a dosis bajas es de evidencia mixta: se avisa, no se calcula."""
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(cannabis_days_ago=0),
+    )
+    assert rec.onset_latency_minutes == 20
+    assert any("REM" in n for n in rec.notes)
+
+
+def test_pasado_un_mes_el_cannabis_ya_no_cuenta():
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(cannabis_days_ago=40),
+    )
+    assert rec.onset_latency_minutes == 20
+    assert rec.notes == []
+
+
+def test_cenar_tarde_baja_la_eficiencia_esperada():
+    tarde = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=0.95),
+        DaySignals(last_meal=time(23, 0)),
+    )
+    pronto = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=0.95),
+        DaySignals(last_meal=time(19, 0)),
+    )
+    assert tarde.time_in_bed_minutes > pronto.time_in_bed_minutes
+    assert any("despertares" in n for n in tarde.notes)
+    assert pronto.notes == []

@@ -34,6 +34,7 @@ class AuthUserOut(BaseModel):
     email: EmailStr
     displayName: str
     onboardingDone: bool
+    isAdmin: bool
     defaultWakeTime: time
     sleepNeedMinutes: int
     declaredLatencyMinutes: int
@@ -46,6 +47,7 @@ class AuthUserOut(BaseModel):
             email=user.email,
             displayName=user.display_name or user.email.split("@")[0],
             onboardingDone=user.onboarding_done,
+            isAdmin=user.is_admin,
             defaultWakeTime=user.default_wake_time,
             sleepNeedMinutes=user.sleep_need_minutes,
             declaredLatencyMinutes=user.declared_latency_minutes,
