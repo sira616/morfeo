@@ -107,6 +107,64 @@ adaptador de la wifi) y abre `http://esa.ip:5173` en **Safari** del iPhone. Comp
 El backend puede seguir escuchando en `127.0.0.1`: el proxy corre en el portátil, así
 que el móvil solo habla con Vite.
 
+### Conectar la API real desde el iPhone
+
+`npm run dev:lan` abre Vite a la wifi, nada más. Que el móvil pinte datos no significa
+que esté hablando con el backend: sin `VITE_API_TARGET` arranca el servidor de mocks y
+el iPhone muestra las fixtures tan contento. Es el error fácil de cometer aquí, porque
+la app se ve perfecta y los números son inventados.
+
+Tres pasos, en este orden:
+
+1. `.env.local` con `VITE_API_TARGET=http://127.0.0.1:8000`. Sin esa línea, mocks.
+
+2. El backend levantado:
+
+   ```bash
+   cd ../morfeo-backend && venv/Scripts/activate && uvicorn app.main:app --reload
+   ```
+
+3. Vite abierto a la wifi:
+
+   ```bash
+   npm run dev:lan
+   ```
+
+Al arrancar, Vite imprime `API → http://127.0.0.1:8000 (backend real, mocks
+desactivados)`. Si esa línea no sale, estás contra los mocks y no hace falta seguir
+mirando.
+
+**El backend no se toca.** Sigue escuchando en `127.0.0.1:8000` y `ALLOWED_ORIGINS` se
+queda como está. El iPhone solo habla con Vite, y es Vite quien reenvía `/api` desde el
+portátil: para Safari todo viene del mismo origen, así que no hay CORS que configurar.
+Levantar uvicorn con `--host 0.0.0.0` expondría la API a la wifi entera sin ganar nada
+a cambio.
+
+**Hay que abrir el puerto en el firewall de Windows.** Que Vite escuche en `0.0.0.0` no
+basta: el firewall corta la conexión entrante y en el iPhone se ve como una página que
+no carga, sin ningún mensaje que lo explique. Una vez, en PowerShell como
+administrador:
+
+```powershell
+netsh advfirewall firewall add rule name="Vite 5173" dir=in action=allow protocol=TCP localport=5173
+```
+
+Para comprobar que el móvil llega y que detrás hay backend, lánzalo desde el portátil
+contra la IP de la wifi, no contra `localhost`:
+
+```bash
+curl -i http://192.168.1.42:5173/api/me
+```
+
+Un `401` con la cabecera `server: uvicorn` confirma las dos cosas a la vez: el puerto
+está abierto y quien responde es el backend. Los mocks devuelven ese mismo `401`, así
+que la cabecera es lo único que los distingue.
+
+La IP cambia cuando el router renueva el DHCP, y entonces el icono de la pantalla de
+inicio apunta a una dirección muerta. Si la app deja de cargar de un día para otro,
+mira la IP antes que nada; reservarla en el router es lo que evita reinstalar el acceso
+directo cada pocas semanas.
+
 Lo que hace que se vea como una app y no como una web: `viewport-fit=cover` y las
 clases `safe-*` de [src/index.css](src/index.css), que devuelven el hueco del notch y
 del indicador de inicio; las metas `apple-mobile-web-app-*` de
