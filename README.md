@@ -61,7 +61,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `npm run dev:lan` | Igual, pero accesible desde el móvil en la misma wifi |
 | `npm run typecheck` | `tsc -b` |
 | `npm run lint` | oxlint |
-| `npm test` | Vitest (77 tests) |
+| `npm test` | Vitest (82 tests) |
 | `npm run test:e2e` | Playwright sobre el build real |
 | `npm run build` | Build de producción |
 
@@ -69,10 +69,11 @@ estar en `ALLOWED_ORIGINS` del backend.
 
 | Ruta | Qué hay |
 |---|---|
-| `/` | **Esta noche**: la ventana, el arco de la noche, el desglose de factores, cinco consejos y el simulador de "¿y si mañana madrugo?" |
+| `/` | **Esta noche**: la ventana, el arco, el resumen del histórico, cinco consejos y el simulador |
+| `/anoche` | Apuntar cómo fue la noche, sin necesidad de reloj |
 | `/check-in` | El check-in del día, conversando o rellenando |
 | `/historial` | Historial denso: gráfica, regularidad, jet lag social, heatmap de ocho semanas y recomendado frente a real |
-| `/reloj` | Importar la exportación del reloj |
+| `/reloj` | Apuntar la noche y, debajo, conectar o importar del reloj |
 | `/perfil` | Horarios, cuenta, email opcional y cambio de contraseña |
 | `/dev` | Panel de administración. Solo visible para cuentas de `ADMIN_USERNAMES` |
 | `/empezar` | Onboarding de tres preguntas |
@@ -113,6 +114,29 @@ Da una **ventana** (±20 min), porque una hora al minuto sería precisión falsa
 debajo el desglose completo: cada factor con sus minutos y su motivo. El backend
 manda esa lista ya calculada; aquí solo se pinta. Si un día el desglose no cuadra con
 la hora, el fallo está en el motor, no en esta capa.
+
+### El desglose vive detrás de una pregunta
+
+«¿Por qué esta hora?» abre una ventana con los factores, las notas y la confianza. Es
+información que se consulta cuando te lo preguntas, no cada vez que abres la app, y
+tenerla siempre desplegada competía con la única cifra que importa. Su sitio lo ocupa
+ahora el resumen del histórico, que contesta «¿cómo voy?».
+
+La ventana usa `<dialog>` nativo: `showModal()` trae gratis el foco atrapado dentro,
+cerrar con Escape y el resto de la página inerte para lectores de pantalla. Lleva un
+respaldo para entornos sin esa API, donde se abre como diálogo normal.
+
+### Apuntar la noche sin reloj
+
+No se pregunta cuántos minutos dormiste, porque nadie lo sabe. Se piden las horas de
+acostarse y levantarse, lo que tardaste en dormirte y el rato que estuviste despierta,
+y de ahí salen el tiempo en la cama y el sueño total. Es la cuenta que hace un reloj,
+con datos que una persona sí puede responder, y el resultado se enseña **antes** de
+guardar: si sale algo raro se ve ahí y no tres pantallas después en una media.
+
+Está en `/anoche`, encadenado a marcar si seguiste la recomendación, y también arriba
+del todo en `/reloj`: sin reloj es la única forma de que el motor conozca tu latencia y
+tu eficiencia reales, así que va antes que lo opcional.
 
 ### El arco de la noche
 

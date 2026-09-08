@@ -5,6 +5,7 @@ import type {
   DevUserDetail,
   Insights,
   Night,
+  RecentCheckin,
   Recommendation,
   TipsToday,
 } from '@/api/morfeo'
@@ -46,11 +47,14 @@ export const mockNights: Night[] = Array.from({ length: MOCK_NIGHT_COUNT }, (_, 
   const wobble = ((i * 37) % 40) - 20
   const slept = Math.round(345 + progress * 75 + wobble)
   const inBed = Math.round(slept / (0.7 + progress * 0.16))
+  const night = daysAgo(MOCK_NIGHT_COUNT - i)
+  const bedMinutes = 23 * 60 + 10 + ((i * 23) % 70)
   return {
-    night_of: daysAgo(MOCK_NIGHT_COUNT - i),
+    night_of: night,
     total_sleep_minutes: slept,
     time_in_bed_minutes: inBed,
     onset_latency_minutes: 30 + ((i * 7) % 20),
+    bed_at: `${night}T${String(Math.floor(bedMinutes / 60) % 24).padStart(2, '0')}:${String(bedMinutes % 60).padStart(2, '0')}:00`,
     efficiency: Number((slept / inBed).toFixed(3)),
     source: 'import',
   }
@@ -245,3 +249,14 @@ export const mockDevUserDetail: DevUserDetail = {
     { at: `${daysAgo(1)}T08:09:00`, action: 'followed', summary: `${daysAgo(2)}: sí` },
   ],
 }
+
+/** Ánimo de los últimos días, de más antiguo a más reciente como los devuelve la API. */
+export const mockRecentCheckins: RecentCheckin[] = Array.from({ length: 10 }, (_, i) => ({
+  day: daysAgo(9 - i),
+  mood: [3, 2, 4, 4, 3, 5, 2, 3, 4, 4][i] ?? 3,
+  energy: null,
+  nap_minutes: i % 4 === 0 ? 25 : 0,
+  coffees: (i % 3) + 1,
+  alcohol_units: i % 5 === 0 ? 2 : 0,
+  cannabis_days_ago: null,
+}))

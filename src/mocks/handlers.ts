@@ -4,6 +4,7 @@ import {
   mockDevUsers,
   mockInsights,
   mockNights,
+  mockRecentCheckins,
   mockRecommendation,
   mockTips,
   mockUser,
@@ -162,6 +163,12 @@ export const handlers = [
       )
     }
   }),
+
+  http.get('/api/checkin/recent', ({ request }) =>
+    unauthorized(request)
+      ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
+      : HttpResponse.json(mockRecentCheckins),
+  ),
 
   http.put('/api/checkin', async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>

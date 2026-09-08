@@ -27,6 +27,8 @@ export type Night = {
   total_sleep_minutes: number
   time_in_bed_minutes: number
   onset_latency_minutes: number | null
+  /** Falta cuando la exportación del reloj solo trajo duraciones. */
+  bed_at: string | null
   efficiency: number
   source: string
 }
@@ -68,6 +70,37 @@ export function markFollowed(day: string, followed: boolean) {
     method: 'PATCH',
     body: { followed },
   })
+}
+
+export type NightIn = {
+  night_of: string
+  total_sleep_minutes: number
+  time_in_bed_minutes: number
+  onset_latency_minutes?: number
+  awakenings?: number
+  bed_at?: string
+}
+
+/** Alta manual de una noche. Idempotente por fecha: reenviarla la corrige. */
+export function saveNight(night: NightIn) {
+  return apiClient<{ written: number }>('/api/sleep/nights', {
+    method: 'POST',
+    body: { nights: [night] },
+  })
+}
+
+export type RecentCheckin = {
+  day: string
+  mood: number | null
+  energy: number | null
+  nap_minutes: number
+  coffees: number
+  alcohol_units: number
+  cannabis_days_ago: number | null
+}
+
+export function getRecentCheckins(days = 14) {
+  return apiClient<RecentCheckin[]>(`/api/checkin/recent?days=${days}`)
 }
 
 export function getNights(days = 30) {

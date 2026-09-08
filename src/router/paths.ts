@@ -4,6 +4,7 @@ export const routes = {
   tonight: '/',
   checkin: '/check-in',
   history: '/historial',
+  night: '/anoche',
   connect: '/reloj',
   profile: '/perfil',
   dev: '/dev',

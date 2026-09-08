@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/atoms/Button'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { importNights } from '@/api/morfeo'
+import { NightLogForm } from '@/components/night/NightLogForm'
 import { ApiError } from '@/lib/apiClient'
 
 const EJEMPLO = `[
@@ -15,9 +16,11 @@ const EJEMPLO = `[
 ]`
 
 /**
- * La importación es la vía que funciona con cualquier reloj desde el primer día.
- * Las integraciones por API son cómodas, pero cada una tiene su propio trámite y
- * ninguna debería bloquear el uso de la app.
+ * Primero apuntar la noche a mano, después conectar un reloj.
+ *
+ * El orden importa: sin reloj, el formulario es la **única** forma de que el motor
+ * conozca tu latencia y tu eficiencia reales, y es lo que la mayoría va a usar a
+ * diario. Poner primero la importación dejaba lo imprescindible debajo de lo opcional.
  */
 export function ConnectPage() {
   const queryClient = useQueryClient()
@@ -39,7 +42,17 @@ export function ConnectPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+      <NightLogForm />
+
+      <div className="border-t pt-2" style={{ borderColor: 'var(--mf-line)' }}>
+        <h2 className="text-headline-sm font-bold">¿Tienes un reloj?</h2>
+        <p className="text-body-sm opacity-70">
+          Si lo conectas, lo de arriba deja de hacer falta: los mismos datos llegan
+          solos cada mañana.
+        </p>
+      </div>
+
       <SurfaceCard>
         <h2 className="mb-2 text-headline-sm font-bold">Importar del reloj</h2>
         <p className="text-body-sm opacity-80">

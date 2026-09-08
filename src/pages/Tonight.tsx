@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, Info } from 'lucide-react'
 import { Button } from '@/components/atoms/Button'
+import { Modal } from '@/components/atoms/Modal'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { NightArc } from '@/components/night/NightArc'
+import { SleepSummaryCard } from '@/components/night/SleepSummaryCard'
 import { TipsCard } from '@/components/night/TipsCard'
 import { getTonight, markFollowed, type Recommendation } from '@/api/morfeo'
 import { routes } from '@/router/paths'
@@ -20,21 +22,31 @@ function duration(minutes: number): string {
 }
 
 const CONFIDENCE_COPY: Record<Recommendation['confidence'], string> = {
-  baja: 'Con pocas noches medidas todavía. Se afina sola conforme sincronices el reloj.',
+  baja: 'Con pocas noches medidas todavía. Se afina sola conforme apuntes noches.',
   media: 'Basada en unos días de datos.',
   alta: 'Basada en dos semanas o más de noches medidas.',
 }
 
+/** Suma minutos a un "HH:MM:SS" y devuelve "HH:MM", cruzando medianoche. */
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = ((h ?? 0) * 60 + (m ?? 0) + minutes + 1440) % 1440
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+
 /**
- * La portada respira: dice una cosa y la explica.
+ * La portada dice una cosa: a qué hora meterte en la cama.
  *
- * En escritorio se parte en dos columnas — la noche a la izquierda, el porqué y los
- * consejos a la derecha — en vez de apilar las mismas tarjetas con más margen. Una
- * columna de móvil centrada en un monitor no se arregla con espaciado.
+ * El desglose de factores vive en una ventana que se abre desde el propio widget, no
+ * en una tarjeta aparte. Es información que se consulta cuando te preguntas "¿y esto
+ * por qué?", no cada vez que abres la app, y tenerla siempre desplegada competía con
+ * la única cifra que importa.
  */
 export function TonightPage() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [simulatedWake, setSimulatedWake] = useState<string>('')
+  const [whyOpen, setWhyOpen] = useState(false)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['tonight', simulatedWake],
@@ -43,7 +55,12 @@ export function TonightPage() {
 
   const follow = useMutation({
     mutationFn: (followed: boolean) => markFollowed(data!.day, followed),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tonight'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tonight'] })
+      // Marcarlo solo dice si te acostaste a la hora; lo que cierra el bucle es qué
+      // pasó después, así que se encadena con el registro de la noche.
+      navigate(routes.night)
+    },
   })
 
   if (isLoading) return <p className="py-8 text-center opacity-70">Calculando…</p>
@@ -73,16 +90,10 @@ export function TonightPage() {
             <NightArc recommendation={data} />
           </div>
 
-          {/* Cuando el motor recorta la ventana por debajo del objetivo, enseñar las dos
-              cifras juntas se lee como una contradicción. Se dice cuál manda. */}
           {data.time_in_bed_minutes < data.target_sleep_minutes ? (
             <p className="mt-3 text-body-sm opacity-70">
               {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
               {hhmm(data.wake_target)}
-              <span className="block">
-                Tu objetivo teórico serían {duration(data.target_sleep_minutes)}, pero la
-                ventana se acorta a propósito. El motivo, al lado.
-              </span>
             </p>
           ) : (
             <p className="mt-3 text-body-sm opacity-70">
@@ -91,6 +102,14 @@ export function TonightPage() {
               {hhmm(data.wake_target)}
             </p>
           )}
+
+          <button
+            type="button"
+            onClick={() => setWhyOpen(true)}
+            className="mt-3 min-h-touch text-body-sm underline opacity-80 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo"
+          >
+            ¿Por qué esta hora?
+          </button>
         </SurfaceCard>
 
         {data.mode === 'restriccion' ? (
@@ -104,7 +123,7 @@ export function TonightPage() {
               />
               <span>
                 <strong>Ventana comprimida a propósito.</strong> Puede parecer poco tiempo,
-                y es intencionado: mira la explicación antes de ampliarla por tu cuenta.
+                y es intencionado: mira el porqué antes de ampliarla por tu cuenta.
               </span>
             </p>
           </SurfaceCard>
@@ -136,70 +155,101 @@ export function TonightPage() {
         </SurfaceCard>
 
         {!simulatedWake ? (
-          <div className="flex gap-2">
-            <Button
-              fullWidth
-              variant={data.followed === true ? 'primary' : 'secondary'}
-              onClick={() => follow.mutate(true)}
-            >
-              La seguí
-            </Button>
-            <Button
-              fullWidth
-              variant={data.followed === false ? 'primary' : 'ghost'}
-              onClick={() => follow.mutate(false)}
-            >
-              No la seguí
-            </Button>
-          </div>
+          <SurfaceCard>
+            <p className="mb-2 text-body-sm font-semibold">¿Seguiste la recomendación de ayer?</p>
+            <div className="flex gap-2">
+              <Button
+                fullWidth
+                variant={data.followed === true ? 'primary' : 'secondary'}
+                onClick={() => follow.mutate(true)}
+              >
+                La seguí
+              </Button>
+              <Button
+                fullWidth
+                variant={data.followed === false ? 'primary' : 'ghost'}
+                onClick={() => follow.mutate(false)}
+              >
+                No la seguí
+              </Button>
+            </div>
+            <p className="mt-2 text-body-sm opacity-60">
+              Después te pregunto cómo fue la noche: eso es lo que hace que la hora se
+              ajuste a ti.
+            </p>
+          </SurfaceCard>
         ) : null}
       </div>
 
-      {/* --- Columna derecha: el porqué y los consejos --- */}
+      {/* --- Columna derecha: cómo vas y qué ayuda --- */}
       <div className="flex flex-col gap-6">
-        <SurfaceCard>
-          <h2 className="mb-2 text-headline-sm font-bold">Por qué esta hora</h2>
-          <ul className="flex flex-col gap-2">
-            {data.factors.map((factor) => (
-              <li key={factor.label} className="flex items-baseline justify-between gap-3">
-                <span>
-                  <strong>{factor.label}</strong>
-                  <span className="block text-body-sm opacity-70">{factor.detail}</span>
-                </span>
-                <span
-                  className="shrink-0 tabular-nums"
-                  style={{ color: factor.minutes < 0 ? 'var(--mf-good)' : undefined }}
-                >
-                  {factor.minutes > 0 ? '+' : ''}
-                  {factor.minutes} min
-                </span>
-              </li>
-            ))}
-          </ul>
-          {data.notes.length > 0 ? (
-            <ul
-              className="mt-3 flex flex-col gap-2 border-t pt-3"
-              style={{ borderColor: 'var(--mf-line)' }}
-            >
-              {data.notes.map((note) => (
-                <li key={note} className="flex items-start gap-2 text-body-sm">
-                  <Info aria-hidden size={16} className="mt-0.5 shrink-0" />
-                  {note}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <p className="mt-3 text-body-sm opacity-70">
-            Confianza {data.confidence}. {CONFIDENCE_COPY[data.confidence]}
-          </p>
-        </SurfaceCard>
-
+        <SleepSummaryCard />
         <TipsCard />
-
         <Link to={routes.checkin} className="text-center text-body-sm underline">
           Contarle cómo ha ido el día
         </Link>
       </div>
+
+      <WhyModal open={whyOpen} onClose={() => setWhyOpen(false)} recommendation={data} />
     </div>
+  )
+}
+
+function WhyModal({
+  open,
+  onClose,
+  recommendation,
+}: {
+  open: boolean
+  onClose: () => void
+  recommendation: Recommendation
+}) {
+  const asleepAt = addMinutes(recommendation.bedtime, recommendation.onset_latency_minutes)
+
+  return (
+    <Modal open={open} onClose={onClose} title="Por qué esta hora">
+      <p className="mb-4 text-body-sm opacity-80">
+        Para levantarte a las {hhmm(recommendation.wake_target)} necesitas{' '}
+        {duration(recommendation.time_in_bed_minutes)} en la cama, y{' '}
+        {recommendation.onset_latency_minutes} min más para dormirte. De ahí sale
+        acostarte a las {hhmm(recommendation.bedtime)} y dormir sobre las {asleepAt}.
+      </p>
+
+      <ul className="flex flex-col gap-2">
+        {recommendation.factors.map((factor) => (
+          <li key={factor.label} className="flex items-baseline justify-between gap-3">
+            <span>
+              <strong>{factor.label}</strong>
+              <span className="block text-body-sm opacity-70">{factor.detail}</span>
+            </span>
+            <span
+              className="shrink-0 tabular-nums"
+              style={{ color: factor.minutes < 0 ? 'var(--mf-good)' : undefined }}
+            >
+              {factor.minutes > 0 ? '+' : ''}
+              {factor.minutes} min
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {recommendation.notes.length > 0 ? (
+        <ul
+          className="mt-3 flex flex-col gap-2 border-t pt-3"
+          style={{ borderColor: 'var(--mf-line)' }}
+        >
+          {recommendation.notes.map((note) => (
+            <li key={note} className="flex items-start gap-2 text-body-sm">
+              <Info aria-hidden size={16} className="mt-0.5 shrink-0" />
+              {note}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <p className="mt-4 text-body-sm opacity-70">
+        Confianza {recommendation.confidence}. {CONFIDENCE_COPY[recommendation.confidence]}
+      </p>
+    </Modal>
   )
 }

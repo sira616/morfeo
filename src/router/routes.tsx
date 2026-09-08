@@ -8,6 +8,7 @@ import { TonightPage } from '@/pages/Tonight'
 import { CheckinPage } from '@/pages/Checkin'
 import { HistoryPage } from '@/pages/History'
 import { ConnectPage } from '@/pages/Connect'
+import { NightLogPage } from '@/pages/NightLog'
 import { ProfilePage } from '@/pages/Profile'
 import { NotFoundPage } from '@/pages/NotFound'
 import { DevPage, DevUserPage } from '@/pages/Dev'
@@ -37,6 +38,7 @@ export function AppRoutes() {
           <Route path={routes.tonight} element={<TonightOrOnboarding />} />
           <Route path={routes.checkin} element={<CheckinPage />} />
           <Route path={routes.history} element={<HistoryPage />} />
+          <Route path={routes.night} element={<NightLogPage />} />
           <Route path={routes.connect} element={<ConnectPage />} />
           <Route path={routes.profile} element={<ProfilePage />} />
           <Route element={<RequireAdmin />}>
