@@ -1,0 +1,327 @@
+/**
+ * Plátano Arreglado — design tokens (rediseño aprobado)
+ * Dark-first by default; `.light` remaps surfaces + decorative accents.
+ */
+
+:root {
+  /* Surfaces (dark-first system) */
+  --mf-bg-0: #0b0e14;
+  --mf-surf-1: #17151f;
+  --mf-surf-2: #1d1a26;
+  --mf-surf-3: #242030;
+  --mf-line: rgba(255, 255, 255, 0.07);
+  --mf-line-strong: rgba(255, 255, 255, 0.12);
+  --mf-ink: #eceaf6;
+  --mf-ink-dim: #a29db4;
+  --mf-ink-faint: #8b8698;
+  --mf-indigo: #6c5ce7;
+  --mf-indigo-2: #8b7bff;
+  --mf-indigo-deep: #4a39c9;
+  --mf-teal: #3fd1c0;
+  --mf-teal-deep: #0f9b8e;
+  --mf-teal-fill: #3fd1c0;
+  --mf-gold: #f4b860;
+  --mf-red: #f0797b;
+  --mf-blue: #6688ff;
+
+  /* Brand logo palette */
+  --mf-brand-navy: #0b0e14;
+  --mf-brand-yellow: #f5d23a;
+  --mf-brand-green: #9adf3f;
+  --mf-brand-green-dim: #6fad28;
+  --mf-accent-text: var(--mf-brand-green);
+  --mf-on-brand: #0b0e14;
+  --mf-on-teal-chip: #052e2a;
+  --mf-on-gold-chip: #241a04;
+  --mf-on-blue-chip: #0b0e14;
+
+  --mf-shadow-md:
+    0 12px 30px -14px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.5);
+  --mf-shadow-glow: 0 10px 34px -14px rgba(108, 92, 231, 0.6);
+  --mf-shadow-brand:
+    0 18px 50px -20px rgba(154, 223, 63, 0.35),
+    0 8px 28px -16px rgba(245, 210, 58, 0.25);
+
+  /* Decorative accents (theme-aware) */
+  --mf-sheen: rgba(255, 255, 255, 0.12);
+  --mf-sheen-strong: rgba(255, 255, 255, 0.16);
+  --mf-inset-shine: rgba(255, 255, 255, 0.28);
+  --mf-control-hover: rgba(255, 255, 255, 0.06);
+  --mf-tint-brand: rgba(154, 223, 63, 0.14);
+  --mf-tint-brand-soft: rgba(154, 223, 63, 0.03);
+  --mf-tint-brand-border: rgba(154, 223, 63, 0.3);
+  --mf-tint-teal: rgba(63, 209, 192, 0.1);
+  --mf-tint-teal-border: rgba(63, 209, 192, 0.22);
+  --mf-tint-indigo: rgba(108, 92, 231, 0.12);
+  --mf-tint-blue: rgba(102, 136, 255, 0.14);
+  --mf-tint-red: rgba(240, 121, 123, 0.14);
+  --mf-glow-brand: radial-gradient(
+    circle,
+    rgba(154, 223, 63, 0.22) 0%,
+    rgba(245, 210, 58, 0.08) 40%,
+    transparent 68%
+  );
+  --mf-glow-indigo: radial-gradient(
+    circle,
+    rgba(108, 92, 231, 0.2),
+    transparent 70%
+  );
+  --mf-session-ring: linear-gradient(
+    140deg,
+    rgba(154, 223, 63, 0.55),
+    rgba(245, 210, 58, 0.28) 55%,
+    rgba(255, 255, 255, 0.05)
+  );
+  --mf-bar-edge: linear-gradient(
+    90deg,
+    transparent,
+    rgba(154, 223, 63, 0.45),
+    rgba(245, 210, 58, 0.25),
+    transparent
+  );
+  --mf-focus-ring: rgba(108, 92, 231, 0.18);
+  --mf-focus-border: rgba(108, 92, 231, 0.6);
+
+  /* Mapped aliases used across existing components */
+  --mf-background: var(--mf-bg-0);
+  --mf-on-background: var(--mf-ink);
+  --mf-surface: var(--mf-surf-1);
+  --mf-surface-dim: var(--mf-bg-0);
+  --mf-surface-bright: var(--mf-surf-2);
+  --mf-surface-container-lowest: #0e0d16;
+  --mf-surface-container-low: var(--mf-surf-1);
+  --mf-surface-container: var(--mf-surf-2);
+  --mf-surface-container-high: var(--mf-surf-3);
+  --mf-surface-container-highest: #2c2838;
+  --mf-surface-variant: var(--mf-surf-3);
+  --mf-on-surface: var(--mf-ink);
+  --mf-on-surface-variant: var(--mf-ink-dim);
+  --mf-inverse-surface: #eceaf6;
+  --mf-inverse-on-surface: #0b0a12;
+  --mf-outline: var(--mf-ink-faint);
+  --mf-outline-variant: var(--mf-line-strong);
+  --mf-surface-tint: var(--mf-indigo);
+
+  --mf-primary: var(--mf-indigo);
+  --mf-on-primary: #ffffff;
+  --mf-primary-container: var(--mf-indigo-2);
+  --mf-on-primary-container: #ffffff;
+  --mf-inverse-primary: var(--mf-indigo-2);
+  --mf-primary-fixed: var(--mf-indigo-2);
+  --mf-primary-fixed-dim: var(--mf-indigo);
+  --mf-on-primary-fixed: #ffffff;
+  --mf-on-primary-fixed-variant: #ffffff;
+
+  --mf-secondary: var(--mf-teal);
+  --mf-on-secondary: #052e2a;
+  --mf-secondary-container: rgba(63, 209, 192, 0.16);
+  --mf-on-secondary-container: var(--mf-teal);
+  --mf-secondary-fixed: #6ee7d6;
+  --mf-secondary-fixed-dim: var(--mf-teal);
+  --mf-on-secondary-fixed: #052e2a;
+  --mf-on-secondary-fixed-variant: #052e2a;
+
+  --mf-tertiary: var(--mf-gold);
+  --mf-on-tertiary: #241a04;
+  --mf-tertiary-container: rgba(244, 184, 96, 0.16);
+  --mf-on-tertiary-container: var(--mf-gold);
+  --mf-tertiary-fixed: #ffcf8a;
+  --mf-tertiary-fixed-dim: var(--mf-gold);
+  --mf-on-tertiary-fixed: #241a04;
+  --mf-on-tertiary-fixed-variant: #241a04;
+
+  --mf-error: var(--mf-red);
+  --mf-on-error: #ffffff;
+  --mf-error-container: rgba(240, 121, 123, 0.16);
+  --mf-on-error-container: #ffc9ca;
+
+  --mf-font-sans:
+    'Atkinson Hyperlegible Next', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    system-ui, sans-serif;
+  --mf-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --mf-auth-canvas: var(--mf-brand-navy);
+  --mf-canvas-radial: radial-gradient(
+    900px 640px at 50% -8%,
+    #142018 0%,
+    #0f1218 42%,
+    var(--mf-brand-navy) 72%
+  );
+
+  /* v2 UI aliases → brand palette (no new colors) */
+  --mf-bg: var(--mf-bg-0);
+  --mf-fg: var(--mf-ink);
+  --mf-muted: var(--mf-ink-dim);
+  --mf-border: var(--mf-line-strong);
+  --mf-surface-2: var(--mf-surf-2);
+  --mf-surface-3: var(--mf-surf-3);
+  --mf-accent: var(--mf-brand-green);
+  --mf-accent-soft: var(--mf-tint-brand);
+  --mf-on-accent: var(--mf-on-brand);
+  --mf-danger: var(--mf-red);
+  --mf-warning: var(--mf-gold);
+  --mf-info: var(--mf-indigo-2);
+  --mf-ring: var(--mf-indigo);
+  --mf-success: var(--mf-brand-green);
+  --mf-shadow: var(--mf-shadow-md);
+  --mf-hint-1: var(--mf-indigo-2);
+  --mf-hint-2: var(--mf-teal);
+  --mf-hint-3: var(--mf-brand-green);
+  --mf-hint-4: var(--mf-gold);
+  --mf-hint-5: #fb923c;
+  --mf-hint-6: var(--mf-red);
+  --mf-node-locked: var(--mf-ink-faint);
+  --mf-node-available: var(--mf-indigo-2);
+  --mf-node-active: var(--mf-gold);
+  --mf-node-done: var(--mf-brand-green);
+}
+
+/* Light theme — brand-tinted whites, navy ink, readable accents */
+.light {
+  --mf-bg-0: #f3f5f0;
+  --mf-background: #f3f5f0;
+  --mf-auth-canvas: #f3f5f0;
+  --mf-surf-1: #ffffff;
+  --mf-surf-2: #eef1ea;
+  --mf-surf-3: #e2e7dd;
+  --mf-surface: #ffffff;
+  --mf-surface-dim: #e8ece3;
+  --mf-surface-bright: #ffffff;
+  --mf-surface-container-lowest: #ffffff;
+  --mf-surface-container-low: #f7f8f4;
+  --mf-surface-container: #eef1ea;
+  --mf-surface-container-high: #e2e7dd;
+  --mf-surface-container-highest: #d5dccf;
+  --mf-surface-variant: #e2e7dd;
+
+  --mf-ink: #0b0e14;
+  --mf-ink-dim: #3a4452;
+  --mf-ink-faint: #6a7482;
+  --mf-on-background: #0b0e14;
+  --mf-on-surface: #0b0e14;
+  --mf-on-surface-variant: #3a4452;
+  --mf-outline: #6a7482;
+  --mf-outline-variant: rgba(11, 14, 20, 0.14);
+  --mf-inverse-surface: #1c2230;
+  --mf-inverse-on-surface: #f3f5f0;
+
+  --mf-line: rgba(11, 14, 20, 0.08);
+  --mf-line-strong: rgba(11, 14, 20, 0.16);
+
+  --mf-indigo: #5b4bd6;
+  --mf-indigo-2: #6c5ce7;
+  --mf-indigo-deep: #4736b8;
+  --mf-teal: #0a6b60;
+  --mf-teal-deep: #08554c;
+  --mf-teal-fill: #3fd1c0;
+  --mf-gold: #d4922a;
+  --mf-red: #c03940;
+  --mf-blue: #1a5fd0;
+
+  --mf-brand-green: #8bc92f;
+  --mf-brand-green-dim: #5f9e1f;
+  --mf-accent-text: #3f7014;
+  --mf-on-brand: #0b0e14;
+  --mf-on-teal-chip: #04312c;
+  --mf-on-gold-chip: #2a1c04;
+  --mf-on-blue-chip: #ffffff;
+
+  --mf-primary: var(--mf-indigo);
+  --mf-primary-container: #ebe7ff;
+  --mf-on-primary-container: #2f2478;
+  --mf-secondary: var(--mf-teal);
+  --mf-on-secondary: #ffffff;
+  --mf-secondary-container: rgba(10, 107, 96, 0.12);
+  --mf-on-secondary-container: #0a6b60;
+  --mf-tertiary: var(--mf-gold);
+  --mf-tertiary-container: rgba(212, 146, 42, 0.14);
+  --mf-on-tertiary-container: #7a4f0a;
+  --mf-error: var(--mf-red);
+  --mf-error-container: rgba(192, 57, 64, 0.12);
+  --mf-on-error-container: #8f1f24;
+
+  --mf-shadow-md:
+    0 14px 32px -16px rgba(11, 14, 20, 0.16),
+    0 4px 12px -6px rgba(11, 14, 20, 0.08);
+  --mf-shadow-glow: 0 12px 28px -14px rgba(91, 75, 214, 0.28);
+  --mf-shadow-brand:
+    0 16px 36px -18px rgba(95, 158, 31, 0.28),
+    0 6px 18px -10px rgba(245, 210, 58, 0.22);
+
+  --mf-sheen: rgba(11, 14, 20, 0.06);
+  --mf-sheen-strong: rgba(11, 14, 20, 0.09);
+  --mf-inset-shine: rgba(255, 255, 255, 0.7);
+  --mf-control-hover: rgba(11, 14, 20, 0.05);
+  --mf-tint-brand: rgba(139, 201, 47, 0.16);
+  --mf-tint-brand-soft: rgba(139, 201, 47, 0.05);
+  --mf-tint-brand-border: rgba(95, 158, 31, 0.35);
+  --mf-tint-teal: rgba(10, 107, 96, 0.12);
+  --mf-tint-teal-border: rgba(10, 107, 96, 0.28);
+  --mf-tint-indigo: rgba(91, 75, 214, 0.1);
+  --mf-tint-blue: rgba(26, 95, 208, 0.12);
+  --mf-tint-red: rgba(192, 57, 64, 0.12);
+  --mf-glow-brand: radial-gradient(
+    circle,
+    rgba(139, 201, 47, 0.28) 0%,
+    rgba(245, 210, 58, 0.14) 42%,
+    transparent 70%
+  );
+  --mf-glow-indigo: radial-gradient(
+    circle,
+    rgba(91, 75, 214, 0.16),
+    transparent 70%
+  );
+  --mf-session-ring: linear-gradient(
+    140deg,
+    rgba(139, 201, 47, 0.7),
+    rgba(245, 210, 58, 0.45) 55%,
+    rgba(11, 14, 20, 0.08)
+  );
+  --mf-bar-edge: linear-gradient(
+    90deg,
+    transparent,
+    rgba(139, 201, 47, 0.55),
+    rgba(245, 210, 58, 0.35),
+    transparent
+  );
+  --mf-focus-ring: rgba(91, 75, 214, 0.16);
+  --mf-focus-border: rgba(91, 75, 214, 0.55);
+
+  --mf-canvas-radial: radial-gradient(
+    1000px 700px at 50% -12%,
+    #e8f2d4 0%,
+    #f0f4e8 38%,
+    #f3f5f0 72%
+  );
+
+  /* v2 UI aliases follow light remaps above */
+  --mf-bg: var(--mf-bg-0);
+  --mf-fg: var(--mf-ink);
+  --mf-muted: var(--mf-ink-dim);
+  --mf-border: var(--mf-line-strong);
+  --mf-surface-2: var(--mf-surf-2);
+  --mf-surface-3: var(--mf-surf-3);
+  --mf-accent: var(--mf-brand-green-dim);
+  --mf-accent-soft: var(--mf-tint-brand);
+  --mf-on-accent: #ffffff;
+  --mf-danger: var(--mf-red);
+  --mf-warning: var(--mf-gold);
+  --mf-info: var(--mf-indigo);
+  --mf-ring: var(--mf-indigo);
+  --mf-success: var(--mf-brand-green-dim);
+  --mf-shadow: var(--mf-shadow-md);
+  --mf-hint-1: var(--mf-indigo);
+  --mf-hint-2: var(--mf-teal-deep);
+  --mf-hint-3: var(--mf-brand-green-dim);
+  --mf-hint-4: #9a6700;
+  --mf-hint-5: #c2410c;
+  --mf-hint-6: var(--mf-red);
+  --mf-node-locked: var(--mf-ink-faint);
+  --mf-node-available: var(--mf-indigo);
+  --mf-node-active: #9a6700;
+  --mf-node-done: var(--mf-brand-green-dim);
+}
+
+.dark {
+  /* same as :root — dark is the default system */
+}

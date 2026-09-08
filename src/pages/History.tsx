@@ -1,0 +1,136 @@
+import { useQuery } from '@tanstack/react-query'
+import { SurfaceCard } from '@/components/atoms/SurfaceCard'
+import { getNights, type Night } from '@/api/morfeo'
+
+const CHART_HEIGHT = 120
+const BAR_GAP = 2
+
+function duration(minutes: number): string {
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`
+}
+
+/**
+ * Gráfica en SVG a mano, sin librería.
+ *
+ * Son dos series y treinta barras: meter una dependencia de charting para esto
+ * pesaría más en el bundle que toda la página.
+ */
+function SleepChart({ nights }: { nights: Night[] }) {
+  if (nights.length === 0) return null
+
+  const max = Math.max(...nights.map((n) => n.time_in_bed_minutes), 480)
+  const barWidth = 100 / nights.length
+
+  return (
+    <svg
+      viewBox={`0 0 100 ${CHART_HEIGHT}`}
+      preserveAspectRatio="none"
+      className="h-32 w-full"
+      role="img"
+      aria-label={`Sueño de las últimas ${nights.length} noches`}
+    >
+      {nights.map((night, index) => {
+        const x = index * barWidth
+        const inBed = (night.time_in_bed_minutes / max) * CHART_HEIGHT
+        const slept = (night.total_sleep_minutes / max) * CHART_HEIGHT
+        return (
+          <g key={night.night_of}>
+            {/* Barra clara: tiempo en la cama. Barra sólida: sueño real. La
+                diferencia entre ambas es, visualmente, la eficiencia. */}
+            <rect
+              x={x}
+              y={CHART_HEIGHT - inBed}
+              width={barWidth - BAR_GAP}
+              height={inBed}
+              fill="var(--mf-line-strong)"
+            />
+            <rect
+              x={x}
+              y={CHART_HEIGHT - slept}
+              width={barWidth - BAR_GAP}
+              height={slept}
+              fill="currentColor"
+            />
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+export function HistoryPage() {
+  const { data: nights = [], isLoading } = useQuery({
+    queryKey: ['nights'],
+    queryFn: () => getNights(30),
+  })
+
+  if (isLoading) return <p className="py-8 text-center opacity-70">Cargando…</p>
+
+  if (nights.length === 0) {
+    return (
+      <SurfaceCard className="text-center">
+        <p>Todavía no hay noches registradas.</p>
+        <p className="mt-1 text-body-sm opacity-70">
+          Sincroniza el reloj o importa una exportación desde «Reloj».
+        </p>
+      </SurfaceCard>
+    )
+  }
+
+  const avgSleep = Math.round(
+    nights.reduce((sum, n) => sum + n.total_sleep_minutes, 0) / nights.length,
+  )
+  const avgEfficiency =
+    nights.reduce((sum, n) => sum + n.efficiency, 0) / nights.length
+
+  return (
+    <div className="flex flex-col gap-4">
+      <SurfaceCard>
+        <h2 className="mb-2 text-headline-sm font-bold">Últimas {nights.length} noches</h2>
+        <SleepChart nights={nights} />
+        <dl className="mt-3 grid grid-cols-2 gap-2 text-body-sm">
+          <div>
+            <dt className="opacity-70">Sueño medio</dt>
+            <dd className="text-headline-sm font-bold tabular-nums">{duration(avgSleep)}</dd>
+          </div>
+          <div>
+            <dt className="opacity-70">Eficiencia media</dt>
+            <dd className="text-headline-sm font-bold tabular-nums">
+              {Math.round(avgEfficiency * 100)}%
+            </dd>
+          </div>
+        </dl>
+        {avgEfficiency < 0.85 ? (
+          <p className="mt-3 text-body-sm opacity-80">
+            Por debajo del 85% la app comprime tu ventana en vez de ampliarla. Es
+            intencionado: pasar horas despierta en la cama empeora la conciliación.
+          </p>
+        ) : null}
+      </SurfaceCard>
+
+      <SurfaceCard padded={false}>
+        <table className="w-full text-body-sm">
+          <caption className="sr-only">Detalle por noche</caption>
+          <thead>
+            <tr className="border-b" style={{ borderColor: 'var(--mf-line)' }}>
+              <th scope="col" className="p-2 text-left">Noche</th>
+              <th scope="col" className="p-2 text-right">Dormido</th>
+              <th scope="col" className="p-2 text-right">En cama</th>
+              <th scope="col" className="p-2 text-right">Efic.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...nights].reverse().map((night) => (
+              <tr key={night.night_of} className="border-b" style={{ borderColor: 'var(--mf-line)' }}>
+                <th scope="row" className="p-2 text-left font-normal">{night.night_of}</th>
+                <td className="p-2 text-right tabular-nums">{duration(night.total_sleep_minutes)}</td>
+                <td className="p-2 text-right tabular-nums">{duration(night.time_in_bed_minutes)}</td>
+                <td className="p-2 text-right tabular-nums">{Math.round(night.efficiency * 100)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </SurfaceCard>
+    </div>
+  )
+}
