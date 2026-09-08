@@ -8,7 +8,12 @@ import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { NightArc } from '@/components/night/NightArc'
 import { SleepSummaryCard } from '@/components/night/SleepSummaryCard'
 import { TipsCard } from '@/components/night/TipsCard'
-import { getTonight, markFollowed, type Recommendation } from '@/api/morfeo'
+import {
+  clearCheckinWakeTarget,
+  getTonight,
+  markFollowed,
+  type Recommendation,
+} from '@/api/morfeo'
 import { routes } from '@/router/paths'
 
 function hhmm(value: string): string {
@@ -90,18 +95,18 @@ export function TonightPage() {
             <NightArc recommendation={data} />
           </div>
 
-          {data.time_in_bed_minutes < data.target_sleep_minutes ? (
-            <p className="mt-3 text-body-sm opacity-70">
-              {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
-              {hhmm(data.wake_target)}
-            </p>
-          ) : (
-            <p className="mt-3 text-body-sm opacity-70">
-              Objetivo: {duration(data.target_sleep_minutes)} de sueño ·{' '}
-              {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
-              {hhmm(data.wake_target)}
-            </p>
-          )}
+          {/* `time_in_bed_minutes` suma la conciliación; `sleep_window_minutes` no.
+              Enseñar el segundo como "en la cama" era la razón de que este texto no
+              cuadrara con el arco de arriba. */}
+          <p className="mt-3 text-body-sm opacity-70">
+            {data.sleep_window_minutes < data.target_sleep_minutes ? null : (
+              <>Objetivo: {duration(data.target_sleep_minutes)} de sueño · </>
+            )}
+            {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
+            {hhmm(data.wake_target)}
+          </p>
+
+          <WakeSource recommendation={data} />
 
           <button
             type="button"
@@ -192,6 +197,37 @@ export function TonightPage() {
 
       <WhyModal open={whyOpen} onClose={() => setWhyOpen(false)} recommendation={data} />
     </div>
+  )
+}
+
+/**
+ * De dónde sale la hora de despertar.
+ *
+ * El check-in de hoy manda sobre el perfil, y eso está bien: "mañana me levanto a las
+ * seis" es más específico que un valor por defecto. Lo que estaba mal era no decirlo,
+ * porque cambiar la hora en el perfil no hacía nada visible y parecía un cuelgue.
+ */
+function WakeSource({ recommendation }: { recommendation: Recommendation }) {
+  const queryClient = useQueryClient()
+  const clear = useMutation({
+    mutationFn: clearCheckinWakeTarget,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tonight'] }),
+  })
+
+  if (recommendation.wake_target_source !== 'checkin') return null
+
+  return (
+    <p className="mt-2 text-body-sm opacity-70">
+      Esa hora viene del check-in de hoy, no de tu perfil.{' '}
+      <button
+        type="button"
+        onClick={() => clear.mutate()}
+        disabled={clear.isPending}
+        className="underline hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo"
+      >
+        Usar la de mi perfil
+      </button>
+    </p>
   )
 }
 

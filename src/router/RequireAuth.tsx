@@ -7,7 +7,14 @@ import { routes } from '@/router/paths'
  */
 export function RequireAuth() {
   const accessToken = useAuthStore((s) => s.accessToken)
+  const restoring = useAuthStore((s) => s.restoring)
   const location = useLocation()
+
+  // Sin esta espera, recargar una ruta protegida rebota al login antes de que dé
+  // tiempo a canjear el refresh guardado, y la sesión parece perdida igualmente.
+  if (restoring) {
+    return <p className="py-8 text-center opacity-70">Un momento…</p>
+  }
 
   if (!accessToken) {
     const next = encodeURIComponent(location.pathname + location.search)

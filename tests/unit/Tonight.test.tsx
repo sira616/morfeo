@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from './test-utils'
 import { TonightPage } from '@/pages/Tonight'
 import { NightLogForm } from '@/components/night/NightLogForm'
-import { mockUser } from '@/mocks/fixtures'
+import { http, HttpResponse } from 'msw'
+import { server } from '@/mocks/server'
+import { mockRecommendation, mockUser } from '@/mocks/fixtures'
 import { useAuthStore } from '@/stores/authStore'
 
 function login() {
@@ -116,5 +118,36 @@ describe('Registro de la noche', () => {
 
     expect(await screen.findByRole('status')).toHaveTextContent(/no queda tiempo dormido/i)
     expect(screen.getByRole('button', { name: /Guardar la noche/i })).toBeDisabled()
+  })
+})
+
+describe('Coordinación de la hora de despertar', () => {
+  beforeEach(login)
+
+  it('el tiempo en la cama incluye la conciliación', async () => {
+    renderWithProviders(<TonightPage />)
+    // 6 h 55 de ventana de sueño + 30 min conciliando = 7 h 25 en la cama. Antes se
+    // enseñaba la ventana pelada y no cuadraba con el arco de arriba.
+    expect((await screen.findAllByText(/7 h 25 min en la cama/)).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/6 h 55 min en la cama/)).not.toBeInTheDocument()
+  })
+
+  it('no dice de dónde viene la hora cuando sale del perfil', async () => {
+    renderWithProviders(<TonightPage />)
+    await screen.findByText('23:15 – 23:55')
+    expect(screen.queryByText(/viene del check-in/i)).not.toBeInTheDocument()
+  })
+
+  it('cuando manda el check-in lo dice y deja volver al perfil', async () => {
+    server.use(
+      http.get('/api/bedtime/tonight', () =>
+        HttpResponse.json({ ...mockRecommendation, wake_target_source: 'checkin' }),
+      ),
+    )
+    renderWithProviders(<TonightPage />)
+
+    // Sin este aviso, cambiar la hora en el perfil no hacía nada visible.
+    expect(await screen.findByText(/viene del check-in de hoy/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Usar la de mi perfil/i })).toBeInTheDocument()
   })
 })

@@ -119,7 +119,9 @@ export const handlers = [
     }
     const wake = new URL(request.url).searchParams.get('wake_target')
     return HttpResponse.json(
-      wake ? { ...recommendation, wake_target: wake } : recommendation,
+      wake
+        ? { ...recommendation, wake_target: wake, wake_target_source: 'simulacion' }
+        : recommendation,
     )
   }),
 

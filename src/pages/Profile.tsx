@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { BadgeCheck, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/atoms/Button'
@@ -48,8 +48,14 @@ export function ProfilePage() {
 
 function SleepPreferences() {
   const user = useAuthStore((s) => s.user)!
+  const queryClient = useQueryClient()
   const [patch, setPatch] = useState<ProfilePatch>({})
-  const save = useMutation({ mutationFn: () => updateProfile(patch) })
+  const save = useMutation({
+    mutationFn: () => updateProfile(patch),
+    // Cambiar la hora de despertar mueve la recomendación: sin invalidarla, la portada
+    // seguía enseñando la anterior y parecía que el perfil no se había guardado.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tonight'] }),
+  })
 
   const wakeTime = patch.default_wake_time ?? user.defaultWakeTime
   const sleepNeed = patch.sleep_need_minutes ?? user.sleepNeedMinutes

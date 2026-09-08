@@ -61,7 +61,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `npm run dev:lan` | Igual, pero accesible desde el móvil en la misma wifi |
 | `npm run typecheck` | `tsc -b` |
 | `npm run lint` | oxlint |
-| `npm test` | Vitest (82 tests) |
+| `npm test` | Vitest (89 tests) |
 | `npm run test:e2e` | Playwright sobre el build real |
 | `npm run build` | Build de producción |
 
@@ -269,9 +269,15 @@ noche, y un fogonazo blanco a las once es justo lo contrario de lo que recomiend
 
 ## Detalles que conviene no deshacer
 
-**Los tokens viven solo en memoria**, nunca en `localStorage`. Aquí hay datos de sueño
-y de estado de ánimo; un token persistido sobrevive a cerrar el navegador en un
-ordenador compartido.
+**Se persiste solo el refresh token**, nunca el access ni el perfil. Antes no se
+guardaba nada y recargar cerraba la sesión, que en una app añadida a la pantalla de
+inicio del móvil es insufrible: iOS la descarga de memoria constantemente.
+
+El precio es que ese token sobrevive a cerrar el navegador. Se acota guardando el de
+menor valor posible —el access caduca en media hora y no hace falta persistirlo—,
+rotándolo en cada uso y pudiendo revocarlo desde el servidor, que es justo lo que un
+access sin estado no permite. `RequireAuth` espera a que termine la restauración antes
+de decidir, o recargar una ruta protegida rebotaría al login antes de tiempo.
 
 **MSW se carga con `import()` dinámico** en [`src/mocks/browser.ts`](src/mocks/browser.ts).
 Cargarlo en el nivel del módulo metía la librería de mocks y los datos de ejemplo en

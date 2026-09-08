@@ -9,10 +9,15 @@ export type Factor = {
 export type Recommendation = {
   day: string
   wake_target: string
+  /** De dónde sale la hora de despertar: el perfil, el check-in de hoy o el simulador. */
+  wake_target_source: 'perfil' | 'checkin' | 'simulacion'
   bedtime: string
   window_start: string
   window_end: string
   target_sleep_minutes: number
+  /** Desde que te duermes hasta el despertador; **sin** la conciliación. */
+  sleep_window_minutes: number
+  /** Lo que de verdad pasas en la cama: lo anterior más la conciliación. */
   time_in_bed_minutes: number
   onset_latency_minutes: number
   mode: 'normal' | 'restriccion'
@@ -105,6 +110,14 @@ export function getRecentCheckins(days = 14) {
 
 export function getNights(days = 30) {
   return apiClient<Night[]>(`/api/sleep/nights?days=${days}`)
+}
+
+/** Quita la hora de despertar del check-in de hoy para que vuelva a mandar el perfil. */
+export function clearCheckinWakeTarget() {
+  return apiClient<{ day: string; saved: string[] }>('/api/checkin', {
+    method: 'PUT',
+    body: { wake_target: null },
+  })
 }
 
 export function saveCheckin(fields: CheckinFields) {

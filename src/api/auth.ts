@@ -39,6 +39,43 @@ export async function register(username: string, password: string, email?: strin
   )
 }
 
+/**
+ * Recupera la sesión guardada al arrancar.
+ *
+ * Solo se persiste el refresh, así que hay que canjearlo por un access y volver a
+ * pedir el perfil. Si el token ya no vale —caducado, revocado, o la contraseña
+ * cambió— se limpia y se acaba en el login, que es lo correcto.
+ */
+export async function restoreSession() {
+  const { refreshToken, setRestored, clearSession } = useAuthStore.getState()
+  if (!refreshToken) {
+    setRestored()
+    return
+  }
+
+  try {
+    const tokens = await apiClient<{ access_token: string; refresh_token: string }>(
+      '/api/auth/refresh',
+      { method: 'POST', body: { refresh_token: refreshToken }, skipAuthRefresh: true },
+    )
+    useAuthStore.getState().setTokens({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    })
+
+    const user = await apiClient<AuthUser>('/api/me', { skipAuthRefresh: true })
+    useAuthStore.getState().setSession({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      user,
+    })
+  } catch {
+    clearSession()
+  } finally {
+    setRestored()
+  }
+}
+
 export async function logout() {
   const refreshToken = useAuthStore.getState().refreshToken
   try {

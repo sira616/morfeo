@@ -43,7 +43,7 @@ function duration(minutes: number): string {
  * SVG a mano y sin librería: son tres segmentos de círculo.
  */
 export function NightArc({ recommendation }: { recommendation: Recommendation }) {
-  const { onset_latency_minutes: latency, time_in_bed_minutes: inBed } = recommendation
+  const { onset_latency_minutes: latency, sleep_window_minutes: inBed } = recommendation
   const targetSleep = Math.min(recommendation.target_sleep_minutes, inBed)
   const restlessness = Math.max(0, inBed - targetSleep)
   const total = latency + inBed
