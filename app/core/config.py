@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # proveedores entran por /api/sleep/import o por la API manual.
     OURA_ACCESS_TOKEN: str = ""
 
+    # Build del frontend a servir desde el propio backend. Vacío = solo API (que es
+    # lo que se quiere en desarrollo, donde el frontend lo sirve Vite).
+    FRONTEND_DIST: str = ""
+
     # Cuentas con acceso al panel de /dev. El rol nunca llega del cliente: se deriva
     # de esta lista, así que promocionar a alguien es editar el .env y reiniciar.
     ADMIN_EMAILS: list[str] = []

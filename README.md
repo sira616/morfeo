@@ -117,7 +117,7 @@ contraseña crean cuenta, y el backend se niega a arrancar si eso se combina con
 pytest -q
 ```
 
-Esperado: **72 passed**, sin red y sin claves.
+Esperado: **94 passed**, sin red y sin claves.
 
 ## Conectar con el frontend
 
@@ -157,8 +157,72 @@ entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin c
 | `GET /api/bedtime/tonight` | **La recomendación.** `?wake_target=HH:MM:SS` simula sin guardar |
 | `GET /api/insights` | Regularidad, jet lag social, racha, recomendado frente a real y heatmap |
 | `GET /api/tips/today` | Cinco consejos con su nivel de evidencia |
+| `GET /api/dev/users` · `users/{id}` | Panel de administración. Responde 404 a quien no es admin |
 | `GET /api/bedtime/history` | Recomendaciones pasadas, con `followed` |
 | `PATCH /api/bedtime/{día}/followed` | Marcar si se siguió |
+
+## Usarlo desde el móvil en casa
+
+El backend sirve también el frontend construido, así que hay **una sola URL y un solo
+proceso**. No hay dos servidores ni proxy que mantener, y como todo viene del mismo
+origen, tampoco hay CORS.
+
+```bash
+cd ../morfeo-frontend && npm run build
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\instalar-arranque.ps1
+```
+
+Eso registra una tarea programada que arranca Morfeo al iniciar sesión, así que
+sobrevive a un reinicio. Tarea de usuario y no servicio de Windows: un servicio
+necesitaría permisos de administrador y correría sin tu perfil, que es más de lo que
+hace falta para una app doméstica.
+
+Falta una cosa que sí necesita administrador, y es la que más despista si se olvida:
+
+```powershell
+New-NetFirewallRule -DisplayName 'Morfeo' -Direction Inbound -Action Allow `
+  -Protocol TCP -LocalPort 8000 -Profile Private
+```
+
+Sin esa regla el móvil no conecta y la página simplemente no carga, sin ningún mensaje
+que lo explique.
+
+### La dirección
+
+`http://syreta.local:8000` es la buena: Windows responde a mDNS con el nombre del
+equipo y el iPhone lo resuelve por Bonjour, así que sigue funcionando aunque el router
+cambie la IP. La IP directa (`http://192.168.1.19:8000`) funciona también, pero es la
+que se rompe sola de un día para otro.
+
+Un aviso: si el equipo tiene adaptadores virtuales (VirtualBox, Hyper-V, WSL), mDNS
+anuncia **todas** sus IPs y el móvil puede intentar primero una que no alcanza. Si
+tarda en cargar, la IP directa lo descarta enseguida.
+
+### Datos de ejemplo
+
+```bash
+venv\Scripts\python.exe scripts/sembrar_demo.py tu@email.com
+```
+
+Escribe en la base de datos y no por la API a propósito: sesenta noches seguidas por
+HTTP chocan con el rate limiting, que está ahí por buenos motivos.
+
+## Panel de /dev
+
+Quién se ha registrado, cuánto registra cada uno y un diario de acciones por usuario.
+Las cuentas con acceso salen de `ADMIN_EMAILS`; el rol **nunca** llega del cliente y se
+recalcula en cada petición, así que quitar a alguien de la lista le quita el acceso sin
+tocar la base de datos.
+
+A quien no es admin le responde **404**, no 403: un 403 confirma que la ruta existe y
+que hay algo detrás que merece la pena buscar.
+
+El registro guarda qué acción hizo cada persona y qué campos tocó, **nunca lo que
+escribió**. Hay un test que lo comprueba metiendo un secreto en las notas de un
+check-in y mirando que no aparezca por ninguna parte del panel.
 
 ## Relojes
 

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, bedtime, checkin, dev, insights, me, sleep
 from app.core.config import IS_PRODUCTION, settings
 from app.core.database import Base, engine
+from app.core.spa import mount_spa
 from app.models import (  # noqa: F401 — registran los modelos en Base.metadata
     AuditEvent,
     BedtimeRecommendation,
@@ -66,3 +68,13 @@ app.include_router(dev.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+# El montaje va al final a propósito: Starlette resuelve las rutas en orden, así que
+# el comodín de la SPA solo entra cuando ninguna ruta de /api ha respondido antes.
+if settings.FRONTEND_DIST.strip():
+    _dist = Path(settings.FRONTEND_DIST).expanduser()
+    if mount_spa(app, _dist):
+        print(f"Sirviendo el frontend desde {_dist.resolve()}")
+    else:
+        print(f"AVISO: FRONTEND_DIST={_dist} no tiene index.html. Solo se expone la API.")
