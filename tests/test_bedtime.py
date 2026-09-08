@@ -41,7 +41,7 @@ def test_la_eficiencia_alarga_el_tiempo_en_cama():
         SleepProfile(sleep_need_minutes=480, onset_latency_minutes=0, efficiency=0.90),
         DaySignals(),
     )
-    assert rec.time_in_bed_minutes == 533  # 480 / 0.90
+    assert rec.sleep_window_minutes == 533  # 480 / 0.90
     assert rec.bedtime == time(22, 7)
 
 
@@ -92,7 +92,7 @@ def test_eficiencia_baja_comprime_la_ventana_en_vez_de_alargarla():
         DaySignals(),
     )
     assert rec.mode == "restriccion"
-    assert rec.time_in_bed_minutes == 390  # 360 dormidos + 30 de margen
+    assert rec.sleep_window_minutes == 390  # 360 dormidos + 30 de margen
     assert rec.bedtime == time(0, 0)
     assert any("eficiencia" in n.lower() for n in rec.notes)
 
@@ -109,7 +109,7 @@ def test_la_restriccion_no_baja_del_suelo_de_seguridad():
         ),
         DaySignals(),
     )
-    assert rec.time_in_bed_minutes == RESTRICTION_FLOOR_MINUTES
+    assert rec.sleep_window_minutes == RESTRICTION_FLOOR_MINUTES
 
 
 def test_la_restriccion_exige_noches_suficientes():
@@ -264,7 +264,7 @@ def test_la_ventana_no_crece_sin_tope_con_eficiencia_mediocre():
         SleepProfile(sleep_need_minutes=550, onset_latency_minutes=30, efficiency=0.86),
         DaySignals(),
     )
-    assert rec.time_in_bed_minutes == 550 + MAX_WAKE_IN_BED_MINUTES
+    assert rec.sleep_window_minutes == 550 + MAX_WAKE_IN_BED_MINUTES
     assert rec.bedtime == time(20, 20)
 
 
@@ -286,7 +286,7 @@ def test_con_historico_la_ventana_se_ancla_en_lo_que_se_duerme_de_verdad():
         DaySignals(sleep_debt_minutes=1400),
     )
     assert rec.mode == "normal"
-    assert rec.time_in_bed_minutes == 375 + MAX_WAKE_IN_BED_MINUTES
+    assert rec.sleep_window_minutes == 375 + MAX_WAKE_IN_BED_MINUTES
     assert rec.bedtime == time(23, 15)
     assert any("no añade sueño" in n for n in rec.notes)
 
@@ -381,6 +381,23 @@ def test_cenar_tarde_baja_la_eficiencia_esperada():
         SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=0.95),
         DaySignals(last_meal=time(19, 0)),
     )
-    assert tarde.time_in_bed_minutes > pronto.time_in_bed_minutes
+    assert tarde.sleep_window_minutes > pronto.sleep_window_minutes
     assert any("despertares" in n for n in tarde.notes)
     assert pronto.notes == []
+
+
+def test_el_tiempo_en_la_cama_incluye_la_conciliacion():
+    """El campo se llamaba `time_in_bed_minutes` sin incluirla, y la interfaz enseñaba
+    "X en la cama" con la ventana de sueño pelada. Ahora hay dos nombres distintos
+    porque son dos cosas distintas."""
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=25, efficiency=1.0),
+        DaySignals(),
+    )
+    assert rec.sleep_window_minutes == 480
+    assert rec.time_in_bed_minutes == 505
+    # Y cuadra con la hora: de acostarse a despertar pasa justo ese rato.
+    from app.domain.bedtime import _hours_between
+
+    assert round(_hours_between(rec.bedtime, WAKE) * 60) == rec.time_in_bed_minutes

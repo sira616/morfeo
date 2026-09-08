@@ -162,18 +162,28 @@ def build_signals(db: DbSession, user: User, day: date) -> DaySignals:
     )
 
 
-def resolve_wake_target(db: DbSession, user: User, day: date, override: time | None) -> time:
+def resolve_wake_target(
+    db: DbSession, user: User, day: date, override: time | None
+) -> tuple[time, str]:
+    """Hora de despertar y **de dónde sale**.
+
+    El check-in de hoy gana sobre el perfil, porque "mañana me levanto a las seis" es
+    más específico que un valor por defecto. Pero esa precedencia hay que contarla: sin
+    decirlo, cambiar la hora en el perfil no hacía nada y parecía que la app se había
+    quedado colgada.
+    """
     if override is not None:
-        return override
+        return override, "simulacion"
     checkin = db.scalar(select(Checkin).where(Checkin.user_id == user.id, Checkin.day == day))
     if checkin and checkin.wake_target:
-        return checkin.wake_target
-    return user.default_wake_time
+        return checkin.wake_target, "checkin"
+    return user.default_wake_time, "perfil"
 
 
 def compute(db: DbSession, user: User, day: date, wake_target: time | None = None) -> Recommendation:
+    resolved, _ = resolve_wake_target(db, user, day, wake_target)
     return recommend_bedtime(
-        wake_target=resolve_wake_target(db, user, day, wake_target),
+        wake_target=resolved,
         profile=load_profile(db, user, day),
         signals=build_signals(db, user, day),
     )
@@ -200,7 +210,7 @@ def store(
     row.window_start = rec.window_start
     row.window_end = rec.window_end
     row.target_sleep_minutes = rec.target_sleep_minutes
-    row.time_in_bed_minutes = rec.time_in_bed_minutes
+    row.sleep_window_minutes = rec.sleep_window_minutes
     row.onset_latency_minutes = rec.onset_latency_minutes
     row.mode = rec.mode
     row.confidence = rec.confidence
@@ -216,10 +226,15 @@ def upsert_checkin(db: DbSession, user: User, day: date, fields: dict) -> Checki
     if checkin is None:
         checkin = Checkin(user_id=user.id, day=day)
         db.add(checkin)
+    # Un `None` explícito **borra**, y tiene que poder hacerlo: sin esto no había
+    # forma de quitar la hora de despertar de un check-in, que se quedaba mandando
+    # sobre el perfil para siempre.
+    #
+    # Quien no quiera pisar nada simplemente no manda la clave: la ruta usa
+    # `exclude_unset`, y el extractor del LLM filtra sus nulos antes de llamar aquí,
+    # porque "no supe deducirlo" no es lo mismo que "bórralo".
     for key, value in fields.items():
-        # Un campo que el extractor no supo deducir llega como None y no debe borrar
-        # lo que la persona ya había respondido antes en el formulario.
-        if value is not None and hasattr(checkin, key):
+        if hasattr(checkin, key):
             setattr(checkin, key, value)
     db.commit()
     db.refresh(checkin)

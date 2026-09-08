@@ -158,7 +158,8 @@ class BedtimeRecommendation(Base):
     window_end: Mapped[time] = mapped_column(Time)
 
     target_sleep_minutes: Mapped[int] = mapped_column(Integer)
-    time_in_bed_minutes: Mapped[int] = mapped_column(Integer)
+    # Sin la conciliación; el tiempo real en la cama es este más `onset_latency_minutes`.
+    sleep_window_minutes: Mapped[int] = mapped_column(Integer)
     onset_latency_minutes: Mapped[int] = mapped_column(Integer)
     mode: Mapped[str] = mapped_column(String(16), default="normal")
     confidence: Mapped[str] = mapped_column(String(8), default="baja")

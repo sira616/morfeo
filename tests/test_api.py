@@ -179,3 +179,60 @@ def test_los_checkins_recientes_son_solo_tuyos(client, auth):
     client.put("/api/checkin", json={"mood": 5}, headers=otra)
     mias = auth_headers(client)
     assert client.get("/api/checkin/recent", headers=mias).json() == []
+
+
+def test_la_hora_del_checkin_manda_pero_se_dice_de_donde_sale(client, auth):
+    """Sin contarlo, cambiar la hora en el perfil no hacía nada y parecía un cuelgue."""
+    client.patch("/api/me", json={"default_wake_time": "10:00:00"}, headers=auth)
+    rec = client.get("/api/bedtime/tonight", headers=auth).json()
+    assert rec["wake_target"] == "10:00:00"
+    assert rec["wake_target_source"] == "perfil"
+
+    client.put("/api/checkin", json={"wake_target": "08:30:00"}, headers=auth)
+    rec = client.get("/api/bedtime/tonight", headers=auth).json()
+    assert rec["wake_target"] == "08:30:00"
+    assert rec["wake_target_source"] == "checkin"
+
+
+def test_se_puede_borrar_la_hora_del_checkin(client, auth):
+    """Antes era imposible: upsert_checkin ignoraba los nulos, así que la hora se
+    quedaba mandando sobre el perfil para siempre."""
+    client.patch("/api/me", json={"default_wake_time": "09:15:00"}, headers=auth)
+    client.put("/api/checkin", json={"wake_target": "06:00:00"}, headers=auth)
+    assert client.get("/api/bedtime/tonight", headers=auth).json()["wake_target"] == "06:00:00"
+
+    client.put("/api/checkin", json={"wake_target": None}, headers=auth)
+    rec = client.get("/api/bedtime/tonight", headers=auth).json()
+    assert rec["wake_target"] == "09:15:00"
+    assert rec["wake_target_source"] == "perfil"
+
+
+def test_no_mandar_un_campo_no_lo_borra(client, auth):
+    """La otra mitad de lo mismo: `exclude_unset` distingue "no lo mando" de "ponlo a
+    null", y el extractor del LLM depende de esa diferencia."""
+    client.put("/api/checkin", json={"mood": 4, "coffees": 3}, headers=auth)
+    client.put("/api/checkin", json={"coffees": 1}, headers=auth)
+
+    recientes = client.get("/api/checkin/recent", headers=auth).json()
+    hoy = recientes[-1]
+    assert hoy["mood"] == 4
+    assert hoy["coffees"] == 1
+
+
+def test_las_marcas_de_tiempo_del_panel_llevan_zona(client, monkeypatch):
+    """SQLite guarda UTC sin tzinfo. Sin la zona, el navegador lo lee como hora local
+    y el panel enseñaba todo dos horas atrasado."""
+    import uuid
+
+    from app.core.config import settings
+
+    username = f"admin{uuid.uuid4().hex[:10]}"
+    monkeypatch.setattr(settings, "ADMIN_USERNAMES", [username])
+    admin = auth_headers(client, username)
+
+    users = client.get("/api/dev/users", headers=admin).json()
+    detalle = client.get(f"/api/dev/users/{users[0]['id']}", headers=admin).json()
+
+    assert detalle["events"], "el alta ya deja un evento"
+    marca = detalle["events"][0]["at"]
+    assert marca.endswith("+00:00") or marca.endswith("Z"), marca

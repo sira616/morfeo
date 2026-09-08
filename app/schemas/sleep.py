@@ -111,10 +111,16 @@ class FactorOut(BaseModel):
 class RecommendationOut(BaseModel):
     day: date
     wake_target: time
+    # "perfil" | "checkin" | "simulacion": de dónde sale la hora de despertar. Sin
+    # esto, cambiarla en el perfil y que no pasara nada parecía un fallo.
+    wake_target_source: Literal["perfil", "checkin", "simulacion"] = "perfil"
     bedtime: time
     window_start: time
     window_end: time
     target_sleep_minutes: int
+    # Desde que te duermes hasta que suena el despertador.
+    sleep_window_minutes: int
+    # Lo que de verdad pasas en la cama: lo anterior más la conciliación.
     time_in_bed_minutes: int
     onset_latency_minutes: int
     mode: Literal["normal", "restriccion"]

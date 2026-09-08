@@ -148,12 +148,20 @@ class Recommendation:
     window_start: time
     window_end: time
     target_sleep_minutes: int
-    time_in_bed_minutes: int
+    # Ventana desde que te duermes hasta que suena el despertador. **No** incluye la
+    # conciliación: se llamaba `time_in_bed_minutes` y ese nombre hizo que la interfaz
+    # enseñara "X en la cama" sin sumar los minutos que cuesta dormirse.
+    sleep_window_minutes: int
     onset_latency_minutes: int
     mode: str  # "normal" | "restriccion"
     confidence: str  # "baja" | "media" | "alta"
     factors: list[Factor] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+
+    @property
+    def time_in_bed_minutes(self) -> int:
+        """Lo que de verdad se pasa en la cama: conciliación incluida."""
+        return self.sleep_window_minutes + self.onset_latency_minutes
 
 
 def _shift(reference: time, minutes: int) -> time:
@@ -395,7 +403,7 @@ def recommend_bedtime(
         window_start=_shift(bedtime, -WINDOW_HALF_WIDTH_MINUTES),
         window_end=_shift(bedtime, WINDOW_HALF_WIDTH_MINUTES),
         target_sleep_minutes=target,
-        time_in_bed_minutes=time_in_bed,
+        sleep_window_minutes=time_in_bed,
         onset_latency_minutes=latency,
         mode=mode,
         confidence=_confidence(profile.nights_observed),

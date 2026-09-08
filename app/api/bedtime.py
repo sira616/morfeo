@@ -18,14 +18,18 @@ from app.services import audit_service, sleep_service
 router = APIRouter(prefix="/api/bedtime", tags=["bedtime"])
 
 
-def _to_out(day: date, wake_target: time, rec, followed: bool | None = None) -> RecommendationOut:
+def _to_out(
+    day: date, wake_target: time, rec, source: str, followed: bool | None = None
+) -> RecommendationOut:
     return RecommendationOut(
         day=day,
         wake_target=wake_target,
+        wake_target_source=source,
         bedtime=rec.bedtime,
         window_start=rec.window_start,
         window_end=rec.window_end,
         target_sleep_minutes=rec.target_sleep_minutes,
+        sleep_window_minutes=rec.sleep_window_minutes,
         time_in_bed_minutes=rec.time_in_bed_minutes,
         onset_latency_minutes=rec.onset_latency_minutes,
         mode=rec.mode,
@@ -48,12 +52,12 @@ def tonight(
     La simulación no se guarda; solo la recomendación del día con la hora real.
     """
     today = date.today()
-    resolved = sleep_service.resolve_wake_target(db, user, today, wake_target)
+    resolved, source = sleep_service.resolve_wake_target(db, user, today, wake_target)
     rec = sleep_service.compute(db, user, today, resolved)
 
     if wake_target is None:
         sleep_service.store(db, user, today, resolved, rec)
-    return _to_out(today, resolved, rec)
+    return _to_out(today, resolved, rec, source)
 
 
 @router.get("/history", response_model=list[RecommendationOut])
@@ -76,7 +80,8 @@ def history(
             window_start=r.window_start,
             window_end=r.window_end,
             target_sleep_minutes=r.target_sleep_minutes,
-            time_in_bed_minutes=r.time_in_bed_minutes,
+            sleep_window_minutes=r.sleep_window_minutes,
+            time_in_bed_minutes=r.sleep_window_minutes + r.onset_latency_minutes,
             onset_latency_minutes=r.onset_latency_minutes,
             mode=r.mode,
             confidence=r.confidence,
