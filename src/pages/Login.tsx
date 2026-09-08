@@ -39,7 +39,7 @@ export function LoginPage() {
 
   return (
     <main
-      className="grid min-h-dvh place-items-center p-6 text-ink"
+      className="safe-top safe-bottom safe-sides grid min-h-dvh place-items-center p-6 text-ink"
       style={{ background: 'var(--mf-canvas-radial)' }}
     >
       <SurfaceCard className="w-full max-w-sm">

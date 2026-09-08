@@ -58,6 +58,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo con mocks |
+| `npm run dev:lan` | Igual, pero accesible desde el móvil en la misma wifi |
 | `npm run typecheck` | `tsc -b` |
 | `npm run lint` | oxlint |
 | `npm test` | Vitest (50 tests) |
@@ -87,6 +88,45 @@ la hora, el fallo está en el motor, no en esta capa.
 Conversando es lo bonito, pero hay noches en que nadie quiere hablar con una app.
 El formulario escribe exactamente los mismos campos, así que perder el dato por no
 tener ganas de conversar habría sido absurdo.
+
+## Instalarla en el iPhone
+
+La app se añade a la pantalla de inicio y se abre a pantalla completa, sin barra de
+Safari. No hace falta App Store ni código nativo.
+
+Con el backend levantado en el portátil:
+
+```bash
+npm run dev:lan
+```
+
+Busca la IP local del portátil (`ipconfig` en Windows, la línea *Dirección IPv4* del
+adaptador de la wifi) y abre `http://esa.ip:5173` en **Safari** del iPhone. Compartir →
+*Añadir a pantalla de inicio*.
+
+El backend puede seguir escuchando en `127.0.0.1`: el proxy corre en el portátil, así
+que el móvil solo habla con Vite.
+
+Lo que hace que se vea como una app y no como una web: `viewport-fit=cover` y las
+clases `safe-*` de [src/index.css](src/index.css), que devuelven el hueco del notch y
+del indicador de inicio; las metas `apple-mobile-web-app-*` de
+[index.html](index.html), que iOS lee en vez del manifest; y un
+[manifest](public/manifest.webmanifest) con `display: standalone`. Hay un test que
+guarda todo eso, porque si alguien borra una meta la web sigue funcionando y solo se
+nota al reinstalarla en el móvil.
+
+### Lo que esto NO resuelve
+
+- **Solo funciona con el portátil encendido y en la misma wifi.** Para usarla fuera de
+  casa hace falta desplegarla.
+- **No lee la app Salud.** HealthKit no es accesible desde una web: ninguna PWA puede
+  leer tu sueño. La vía sin código nativo es una automatización de Atajos que haga
+  `POST` a `/api/sleep/nights` cada mañana. Mientras tanto, el check-in manual y el
+  importador.
+- **Sin notificaciones.** iOS las permite a las PWA instaladas, pero exigen HTTPS, así
+  que llegan con el despliegue, no con esto.
+- **Pide contraseña cada vez** que iOS descarga la app de memoria: los tokens viven
+  solo en memoria, por decisión deliberada.
 
 ## Stack
 
@@ -124,4 +164,6 @@ mínimo), que no colisiona con nada.
   `@axe-core/playwright` instalados, pero todavía sin usar).
 - El desglose de factores no está traducido a gráfico; hoy es una lista.
 - Sin notificación ni recordatorio a la hora de la ventana, que es la funcionalidad
-  que haría que la app se use sin abrirla.
+  que haría que la app se use sin abrirla. Requiere despliegue con HTTPS.
+- Sin despliegue: hoy solo se usa desde la wifi de casa con el portátil encendido.
+- Sin entrada automática de datos desde el iPhone (ver el apartado de arriba).

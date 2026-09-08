@@ -147,6 +147,9 @@
     color: var(--mf-ink);
     background: var(--mf-canvas-radial);
     -webkit-font-smoothing: antialiased;
+    /* Añadida a la pantalla de inicio, el rebote elástico de iOS deja ver el fondo
+       del sistema por los bordes y delata que esto es una web. */
+    overscroll-behavior: none;
   }
 
   svg {
@@ -157,6 +160,31 @@
   :focus-visible {
     outline: 2px solid var(--mf-indigo);
     outline-offset: 2px;
+  }
+}
+
+/* Zonas seguras del iPhone.
+   Con `viewport-fit=cover` y la barra de estado translúcida, la app dibuja de borde a
+   borde: sin estos rellenos el título se mete bajo el reloj del sistema y la barra de
+   navegación queda debajo del indicador de inicio, donde no se puede pulsar.
+   En un navegador de escritorio `env()` vale 0 y no cambian nada. */
+@layer components {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-sides {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Para el contenido que scrollea por debajo de la barra de navegación fija. */
+  .safe-scroll-bottom {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   }
 }
 

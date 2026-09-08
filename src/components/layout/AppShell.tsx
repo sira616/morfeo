@@ -22,7 +22,7 @@ export function AppShell() {
       style={{ background: 'var(--mf-canvas-radial)' }}
     >
       <header
-        className="flex min-h-touch shrink-0 items-center justify-between gap-4 border-b px-4"
+        className="safe-top safe-sides flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2"
         style={{ background: 'var(--mf-surf-1)', borderColor: 'var(--mf-line)' }}
       >
         <NavLink
@@ -38,13 +38,13 @@ export function AppShell() {
         </div>
       </header>
 
-      <main className="mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-x-hidden overflow-y-auto px-4 pb-24 pt-4">
+      <main className="safe-scroll-bottom mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-x-hidden overflow-y-auto px-4 pt-4">
         <Outlet />
       </main>
 
       {/* Navegación abajo: la app se usa de noche, con una mano y el móvil en la cama. */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 flex justify-around border-t px-2 py-1"
+        className="safe-bottom safe-sides fixed inset-x-0 bottom-0 z-50 flex justify-around border-t px-2 py-1"
         style={{ background: 'var(--mf-surf-1)', borderColor: 'var(--mf-line)' }}
         aria-label="Secciones"
       >

@@ -2,14 +2,28 @@
 <html lang="es" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover deja que la app pinte bajo el notch y la barra de inicio;
+         el hueco lo recuperan las clases safe-* de index.css con env(safe-area-inset-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#17151f" />
     <meta
       name="description"
       content="Morfeo calcula a qué hora meterte en la cama a partir de tus datos de sueño."
     />
     <title>Morfeo</title>
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- iOS ignora el manifest para esto: necesita sus propias metas y un icono PNG.
+         `black-translucent` mete el contenido bajo la barra de estado, que es lo que
+         hace que la app no parezca una web con una franja pegada arriba. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Morfeo" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
