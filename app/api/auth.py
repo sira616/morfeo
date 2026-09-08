@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import HTTPAuthorizationCredentials
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from supabase_auth.errors import AuthApiError
 
@@ -55,7 +56,22 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
     user = User(id=resp.user.id, email=payload.email)
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # El proveedor de auth acepta el alta pero ya hay una fila de perfil con ese
+        # email: la cuenta se borró del proveedor y la fila local sobrevivió. No se
+        # relinka sola —sería regalar el perfil de otra persona a quien registre su
+        # email— así que se responde con un conflicto explícito en vez de un 500.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Ya existe un perfil con ese email. En desarrollo esto pasa al "
+                "reiniciar el backend con LOCAL_DEV_AUTH: las cuentas viven en memoria "
+                "y se pierden, pero la base de datos no. Usa otro email o borra morfeo.db."
+            ),
+        )
     db.refresh(user)
     return user
 

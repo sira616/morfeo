@@ -74,7 +74,7 @@ contraseña crean cuenta, y el backend se niega a arrancar si eso se combina con
 pytest -q
 ```
 
-Esperado: **45 passed**, sin red y sin claves.
+Esperado: **48 passed**, sin red y sin claves.
 
 ## Conectar con el frontend
 

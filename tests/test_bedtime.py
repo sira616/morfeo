@@ -5,6 +5,7 @@ from datetime import time
 import pytest
 
 from app.domain.bedtime import (
+    MAX_WAKE_IN_BED_MINUTES,
     RESTRICTION_FLOOR_MINUTES,
     SLEEP_NEED_CEILING_MINUTES,
     DaySignals,
@@ -249,3 +250,42 @@ def test_build_profile_sin_latencias_medidas_asume_veinte_minutos():
     )
     assert profile.onset_latency_minutes == 20
     assert profile.efficiency == pytest.approx(400 / 460, abs=0.001)
+
+
+def test_la_ventana_no_crece_sin_tope_con_eficiencia_mediocre():
+    """El agujero que destapó la primera prueba con datos reales.
+
+    Con eficiencia 0.86 y un objetivo de 9 h 10, `objetivo / eficiencia` daba 10 h 40
+    en la cama y mandaba a dormir a las 19:08. Sin histórico que anclar la ventana, el
+    tope de vigilia la deja en el objetivo más una hora.
+    """
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=550, onset_latency_minutes=30, efficiency=0.86),
+        DaySignals(),
+    )
+    assert rec.time_in_bed_minutes == 550 + MAX_WAKE_IN_BED_MINUTES
+    assert rec.bedtime == time(20, 20)
+
+
+def test_con_historico_la_ventana_se_ancla_en_lo_que_se_duerme_de_verdad():
+    """Aunque la eficiencia sea buena y no toque modo restricción.
+
+    Quien lleva tres semanas durmiendo 6 h 15 no va a dormir 9 h esta noche por estar
+    11 en la cama. La ventana se ancla en lo observado más una hora de margen.
+    """
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(
+            sleep_need_minutes=480,
+            onset_latency_minutes=30,
+            efficiency=0.88,
+            observed_sleep_minutes=375,
+            nights_observed=21,
+        ),
+        DaySignals(sleep_debt_minutes=1400),
+    )
+    assert rec.mode == "normal"
+    assert rec.time_in_bed_minutes == 375 + MAX_WAKE_IN_BED_MINUTES
+    assert rec.bedtime == time(23, 15)
+    assert any("no añade sueño" in n for n in rec.notes)

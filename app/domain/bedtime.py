@@ -43,6 +43,12 @@ RESTRICTION_MIN_NIGHTS = 5
 RESTRICTION_BUFFER_MINUTES = 30
 RESTRICTION_FLOOR_MINUTES = 330  # 5 h 30: suelo de la restricción de sueño clásica
 
+# Margen de vigilia tolerable dentro de la ventana cuando la eficiencia es buena.
+# Sin este tope, `objetivo / eficiencia` crece sin control: con una eficiencia del 86%
+# y un objetivo de 9 h salen 10 h 40 en la cama, que es exactamente lo que la app
+# desaconseja en el modo restricción.
+MAX_WAKE_IN_BED_MINUTES = 60
+
 # Ejercicio intenso terminado dentro de esta ventana antes de acostarse: la
 # temperatura central sigue alta y la conciliación se alarga.
 LATE_EXERCISE_HOURS = 3
@@ -239,29 +245,41 @@ def recommend_bedtime(
             )
 
     mode = "normal"
-    time_in_bed = round(target / efficiency)
+    # Tope duro de vigilia dentro de la ventana: por buena que sea la eficiencia
+    # declarada, no se prescribe más de una hora en la cama sin dormir.
+    time_in_bed = min(round(target / efficiency), target + MAX_WAKE_IN_BED_MINUTES)
 
     if (
-        profile.efficiency < RESTRICTION_EFFICIENCY_THRESHOLD
-        and profile.nights_observed >= RESTRICTION_MIN_NIGHTS
+        profile.nights_observed >= RESTRICTION_MIN_NIGHTS
         and profile.observed_sleep_minutes is not None
     ):
-        # Contraintuitivo y deliberado: con la eficiencia baja, ampliar la ventana
-        # empeora el problema. Cada hora despierta en la cama refuerza la asociación
-        # cama-desvelo. Se comprime a lo que la persona duerme de verdad más un margen
-        # corto, que es la base de la restricción de sueño de la TCC-I.
-        compressed = max(
-            profile.observed_sleep_minutes + RESTRICTION_BUFFER_MINUTES, RESTRICTION_FLOOR_MINUTES
-        )
-        if compressed < time_in_bed:
-            time_in_bed = compressed
-            mode = "restriccion"
-            notes.append(
-                f"Tu eficiencia de sueño es del {profile.efficiency:.0%} (dormido frente a tiempo "
-                f"en la cama). Por debajo del {RESTRICTION_EFFICIENCY_THRESHOLD:.0%} lo indicado es "
-                f"acortar la ventana, no alargarla: pasar horas despierta en la cama entrena al "
-                f"cerebro a no dormir en ella."
-            )
+        # La ventana se ancla en lo que la persona duerme de verdad, no en el déficit
+        # que arrastra. Quien lleva tres semanas durmiendo seis horas no va a dormir
+        # nueve esta noche por estar once en la cama: solo sumará vigilia.
+        restricting = profile.efficiency < RESTRICTION_EFFICIENCY_THRESHOLD
+        buffer = RESTRICTION_BUFFER_MINUTES if restricting else MAX_WAKE_IN_BED_MINUTES
+        anchored = max(profile.observed_sleep_minutes + buffer, RESTRICTION_FLOOR_MINUTES)
+        if anchored < time_in_bed:
+            time_in_bed = anchored
+            if restricting:
+                # Contraintuitivo y deliberado: con la eficiencia baja, ampliar la
+                # ventana empeora el problema. Cada hora despierta en la cama refuerza
+                # la asociación cama-desvelo. Es la base de la restricción de sueño
+                # de la TCC-I.
+                mode = "restriccion"
+                notes.append(
+                    f"Tu eficiencia de sueño es del {profile.efficiency:.0%} (dormido frente a "
+                    f"tiempo en la cama). Por debajo del {RESTRICTION_EFFICIENCY_THRESHOLD:.0%} lo "
+                    f"indicado es acortar la ventana, no alargarla: pasar horas despierta en la "
+                    f"cama entrena al cerebro a no dormir en ella."
+                )
+            else:
+                notes.append(
+                    f"La ventana se ajusta a lo que duermes de verdad últimamente "
+                    f"({profile.observed_sleep_minutes // 60} h {profile.observed_sleep_minutes % 60:02d} "
+                    f"min de media) más una hora de margen. Estar más tiempo en la cama no añade "
+                    f"sueño: añade vigilia."
+                )
 
     if signals.exercise_end is not None and signals.exercise_intensity in ("moderate", "hard"):
         provisional = _shift(wake_target, -(time_in_bed + latency))
