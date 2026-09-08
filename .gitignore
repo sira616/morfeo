@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.env
+# Copias de seguridad del .env: contienen secretos, nunca deben versionarse.
+.env.backup*
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+.vscode/
+.idea/
+*.sql
+
+# Base de datos local de desarrollo (DATABASE_URL=sqlite:///./morfeo.db).
+# Son datos de sueño y de estado de ánimo: fuera del repositorio.
+morfeo.db
+*.db
