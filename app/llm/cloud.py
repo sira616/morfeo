@@ -18,7 +18,8 @@ def generate(system_prompt: str, user_message: str) -> str:
     if not settings.ANTHROPIC_API_KEY:
         return (
             "[modo demo sin ANTHROPIC_API_KEY configurada] "
-            "Aquí respondería el tutor respetando el nivel de ayuda indicado en el system prompt. "
+            "Aquí iría la conversación del check-in. El cálculo de la hora no depende de esto: "
+            "lo hace app/domain/bedtime.py y funciona igual sin modelo. "
             "Configura ANTHROPIC_API_KEY en tu .env para obtener respuestas reales del modelo."
         )
 
@@ -35,7 +36,8 @@ def stream(system_prompt: str, user_message: str) -> Iterator[str]:
     if not settings.ANTHROPIC_API_KEY:
         demo_text = (
             "[modo demo sin ANTHROPIC_API_KEY configurada] "
-            "Aquí respondería el tutor respetando el nivel de ayuda indicado en el system prompt. "
+            "Aquí iría la conversación del check-in. El cálculo de la hora no depende de esto: "
+            "lo hace app/domain/bedtime.py y funciona igual sin modelo. "
             "Configura ANTHROPIC_API_KEY en tu .env para obtener respuestas reales del modelo."
         )
         chunk_size = max(1, len(demo_text) // 3)

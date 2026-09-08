@@ -74,7 +74,30 @@ contraseña crean cuenta, y el backend se niega a arrancar si eso se combina con
 pytest -q
 ```
 
-Esperado: **43 passed**, sin red y sin claves.
+Esperado: **45 passed**, sin red y sin claves.
+
+## Conectar con el frontend
+
+El frontend pide siempre a `/api/...` en su propio origen y el proxy de Vite decide
+qué hay detrás, así que en desarrollo no hay CORS. En la rama `frontend`, un
+`.env.local` con:
+
+```
+VITE_API_TARGET=http://127.0.0.1:8000
+```
+
+hace que `npm run dev` deje de levantar los mocks y hable con este backend. Levanta
+los dos y comprueba que llegan:
+
+```bash
+curl -i http://127.0.0.1:5173/api/me
+```
+
+`401` con la cabecera `server: uvicorn` significa que el proxy llega aquí.
+
+En un despliegue real, con dominios distintos, el frontend usa `VITE_API_BASE_URL` y
+entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin comodines
+(el arranque falla si los hay).
 
 ## Rutas
 

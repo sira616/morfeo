@@ -107,13 +107,12 @@ def load_profile(db: DbSession, user: User, today: date) -> SleepProfile:
             sleep_need_minutes=user.sleep_need_minutes,
             onset_latency_minutes=user.declared_latency_minutes,
         )
+    # Las latencias van alineadas noche a noche (con None donde el reloj no la midió),
+    # porque build_profile las descuenta del tiempo en cama de *esa* noche.
     return build_profile(
         recent_sleep_minutes=[n.total_sleep_minutes for n in nights],
         recent_time_in_bed_minutes=[n.time_in_bed_minutes for n in nights],
-        recent_latency_minutes=[
-            n.onset_latency_minutes for n in nights if n.onset_latency_minutes is not None
-        ]
-        or [user.declared_latency_minutes],
+        recent_latency_minutes=[n.onset_latency_minutes for n in nights],
         sleep_need_minutes=user.sleep_need_minutes,
     )
 

@@ -212,12 +212,40 @@ def test_build_profile_sin_datos_cae_en_los_valores_por_defecto():
 
 
 def test_build_profile_calcula_eficiencia_y_latencia_mediana():
+    """La eficiencia se mide sobre el tiempo ya dormido, no sobre el tiempo en cama.
+
+    1260 min dormidos entre 1350 de ventana (1440 en cama menos las tres latencias).
+    Usar los 1440 crudos daría 0.875 y contaría la latencia dos veces, porque el motor
+    la vuelve a sumar al calcular la hora.
+    """
     profile = build_profile(
         recent_sleep_minutes=[420, 400, 440],
         recent_time_in_bed_minutes=[480, 480, 480],
         recent_latency_minutes=[10, 30, 50],
     )
-    assert profile.efficiency == pytest.approx(0.875, abs=0.001)
+    assert profile.efficiency == pytest.approx(1260 / 1350, abs=0.001)
     assert profile.onset_latency_minutes == 30
     assert profile.observed_sleep_minutes == 420
     assert profile.nights_observed == 3
+
+
+def test_build_profile_usa_la_latencia_mediana_en_las_noches_sin_medir():
+    """Una noche sin latencia medida no puede quedarse con el tiempo en cama crudo:
+    inflaría su ventana y bajaría la eficiencia sin motivo."""
+    profile = build_profile(
+        recent_sleep_minutes=[400, 400],
+        recent_time_in_bed_minutes=[480, 480],
+        recent_latency_minutes=[40, None],
+    )
+    assert profile.efficiency == pytest.approx(800 / 880, abs=0.001)
+    assert profile.onset_latency_minutes == 40
+
+
+def test_build_profile_sin_latencias_medidas_asume_veinte_minutos():
+    profile = build_profile(
+        recent_sleep_minutes=[400],
+        recent_time_in_bed_minutes=[480],
+        recent_latency_minutes=[None],
+    )
+    assert profile.onset_latency_minutes == 20
+    assert profile.efficiency == pytest.approx(400 / 460, abs=0.001)

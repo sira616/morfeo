@@ -301,22 +301,41 @@ def sleep_debt(recent_sleep_minutes: list[int], sleep_need_minutes: int, window:
 def build_profile(
     recent_sleep_minutes: list[int],
     recent_time_in_bed_minutes: list[int],
-    recent_latency_minutes: list[int],
+    recent_latency_minutes: list[int | None],
     sleep_need_minutes: int = 480,
 ) -> SleepProfile:
     """Perfil derivado del histórico del reloj. Con pocas noches cae a los valores
-    por defecto, y `nights_observed` deja claro que la confianza es baja."""
+    por defecto, y `nights_observed` deja claro que la confianza es baja.
+
+    Las tres listas van alineadas por noche; la de latencias admite `None` en las
+    noches que el reloj no la midió.
+
+    Ojo con la eficiencia: aquí **no** es la definición clásica. El tiempo en cama que
+    reporta el reloj incluye los minutos que se tarda en dormir, y `recommend_bedtime`
+    suma esa latencia aparte. Dividir por la eficiencia clásica la contaría dos veces
+    y adelantaría la hora recomendada entre veinte y cuarenta minutos. Por eso la
+    latencia se descuenta del tiempo en cama antes de calcularla: lo que sale mide la
+    fragmentación de la noche **una vez dormido**, que es lo que el motor necesita.
+    """
     nights = min(len(recent_sleep_minutes), len(recent_time_in_bed_minutes))
     if nights == 0:
         return SleepProfile(sleep_need_minutes=sleep_need_minutes)
 
     slept = recent_sleep_minutes[-nights:]
     in_bed = recent_time_in_bed_minutes[-nights:]
-    total_in_bed = sum(in_bed)
-    efficiency = sum(slept) / total_in_bed if total_in_bed else 0.90
+    # Se rellena por delante: si faltan latencias son las noches más antiguas las que
+    # se quedan sin dato, no las recientes.
+    latencies_per_night = ([None] * nights + list(recent_latency_minutes))[-nights:]
 
-    latencies = sorted(recent_latency_minutes)
-    latency = latencies[len(latencies) // 2] if latencies else 20
+    measured = [lat for lat in latencies_per_night if lat is not None]
+    latency = sorted(measured)[len(measured) // 2] if measured else 20
+
+    asleep_window = [
+        max(1, bed - (lat if lat is not None else latency))
+        for bed, lat in zip(in_bed, latencies_per_night)
+    ]
+    total_window = sum(asleep_window)
+    efficiency = sum(slept) / total_window if total_window else 0.90
 
     return SleepProfile(
         sleep_need_minutes=sleep_need_minutes,
