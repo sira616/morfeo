@@ -49,10 +49,17 @@ RESTRICTION_FLOOR_MINUTES = 330  # 5 h 30: suelo de la restricción de sueño cl
 # desaconseja en el modo restricción.
 MAX_WAKE_IN_BED_MINUTES = 60
 
-# Ejercicio intenso terminado dentro de esta ventana antes de acostarse: la
-# temperatura central sigue alta y la conciliación se alarga.
-LATE_EXERCISE_HOURS = 3
+# Ejercicio **vigoroso** terminado dentro de esta ventana: la temperatura central sigue
+# alta y la conciliación se alarga.
+#
+# La ventana era de 3 h y se bajó a 1 h con la evidencia en la mano: un metaanálisis de
+# 23 estudios no encontró diferencias en latencia, eficiencia ni duración con ejercicio
+# vespertino. La única excepción es el vigoroso que acaba a menos de una hora, y aun así
+# retrasa el inicio unos 14 minutos. Penalizar a tres horas desaconsejaba entrenar por
+# la tarde sin motivo, que es un mal consejo de salud.
+LATE_EXERCISE_HOURS = 1
 LATE_EXERCISE_LATENCY_PENALTY = 15
+LATE_EXERCISE_INTENSITIES = ("hard",)
 
 # La cafeína tiene una vida media de 5-6 h: la tomada por la tarde sigue en sangre
 # a la hora de acostarse.
@@ -281,14 +288,18 @@ def recommend_bedtime(
                     f"sueño: añade vigilia."
                 )
 
-    if signals.exercise_end is not None and signals.exercise_intensity in ("moderate", "hard"):
+    if (
+        signals.exercise_end is not None
+        and signals.exercise_intensity in LATE_EXERCISE_INTENSITIES
+    ):
         provisional = _shift(wake_target, -(time_in_bed + latency))
         if _hours_between(signals.exercise_end, provisional) < LATE_EXERCISE_HOURS:
             latency += LATE_EXERCISE_LATENCY_PENALTY
             notes.append(
-                f"Terminaste de entrenar a las {signals.exercise_end.strftime('%H:%M')}, menos de "
-                f"{LATE_EXERCISE_HOURS} h antes de acostarte: la temperatura corporal sigue alta y "
-                f"tardarás más en dormirte."
+                f"Terminaste de entrenar fuerte a las "
+                f"{signals.exercise_end.strftime('%H:%M')}, menos de una hora antes de acostarte: "
+                f"la temperatura corporal sigue alta y tardarás algo más en dormirte. Entrenar "
+                f"por la tarde, en general, no estropea el sueño."
             )
 
     bedtime = _shift(wake_target, -(time_in_bed + latency))

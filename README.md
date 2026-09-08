@@ -51,7 +51,50 @@ Ampliar la ventana refuerza esa asociación. El motor entra en modo `restriccion
 comprime a lo que la persona duerme de verdad más 30 minutos, con un suelo de 5 h 30.
 Es la base de la restricción de sueño de la TCC-I.
 
+**El ejercicio de tarde no penaliza.** La ventana era de tres horas y bajó a una, y
+solo para el vigoroso: un metaanálisis de 23 estudios no encontró diferencias en
+latencia, eficiencia ni duración con ejercicio vespertino, y la única excepción es el
+intenso que acaba a menos de una hora, que retrasa el inicio unos catorce minutos.
+Penalizar a tres horas desaconsejaba entrenar por la tarde sin motivo, que es un mal
+consejo de salud.
+
 Cada regla lleva su test en [`tests/test_bedtime.py`](tests/test_bedtime.py).
+
+## Métricas del histórico
+
+[`app/domain/insights.py`](app/domain/insights.py) es igual de puro que el motor, y usa
+**estadística circular** en casi todo. No es un capricho: el punto medio de sueño de
+quien se acuesta a las 00:30 vale 30 minutos y el de quien se acuesta a las 23:30 vale
+1410; su media aritmética da las doce del mediodía, que es absurdo. En el círculo da la
+medianoche.
+
+- **Regularidad**: dispersión del punto medio de sueño, llevada a una puntuación de 0 a
+  100. En 61.000 adultos del UK Biobank, el quintil más regular tuvo un 30% menos de
+  mortalidad por cualquier causa, y la regularidad predijo mejor que las horas dormidas.
+- **Jet lag social**: desfase entre el punto medio de diario y el de viernes y sábado.
+- **Racha y adherencia**: noches siguiendo la recomendación. Un día sin responder no
+  rompe la racha; castigar el olvido convertiría la racha en una obligación de
+  registrar, que es el tipo de presión que estropea el sueño.
+
+Cuando faltan noches con horas reales, estas métricas devuelven `null`, nunca un cero:
+un cero se leería como "tienes un horario malísimo" cuando lo que pasa es que el
+importador solo trajo duraciones.
+
+## Consejos
+
+[`app/content/sleep_tips.py`](app/content/sleep_tips.py) es un corpus de treinta y pico
+consejos, cada uno con **nivel de evidencia y fuente**, y las dos cosas se enseñan.
+
+Es una decisión de producto, no un adorno: la AASM recomienda no usar la higiene del
+sueño como terapia única para el insomnio crónico, porque los consejos sueltos no son
+un tratamiento. Lo que tiene respaldo fuerte es la parte conductual —control de
+estímulos y restricción de sueño— que es la que ya aplica el motor. Una app que
+presenta "ventila la habitación" con el mismo peso que "reserva la cama para dormir"
+está mintiendo por omisión.
+
+La selección de cada día prioriza lo que le pasa hoy a esa persona (café tarde,
+alcohol, eficiencia baja, horario irregular) y se siembra con `(usuario, fecha)`, así
+que no cambia al recargar: unos consejos que bailan no se leen, se hojean.
 
 ## Arrancar
 
@@ -74,7 +117,7 @@ contraseña crean cuenta, y el backend se niega a arrancar si eso se combina con
 pytest -q
 ```
 
-Esperado: **48 passed**, sin red y sin claves.
+Esperado: **72 passed**, sin red y sin claves.
 
 ## Conectar con el frontend
 
@@ -112,6 +155,8 @@ entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin c
 | `PUT /api/checkin` | Check-in por formulario |
 | `POST /api/checkin/stream` | Check-in conversacional (SSE) |
 | `GET /api/bedtime/tonight` | **La recomendación.** `?wake_target=HH:MM:SS` simula sin guardar |
+| `GET /api/insights` | Regularidad, jet lag social, racha, recomendado frente a real y heatmap |
+| `GET /api/tips/today` | Cinco consejos con su nivel de evidencia |
 | `GET /api/bedtime/history` | Recomendaciones pasadas, con `followed` |
 | `PATCH /api/bedtime/{día}/followed` | Marcar si se siguió |
 

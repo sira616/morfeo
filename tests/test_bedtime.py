@@ -289,3 +289,28 @@ def test_con_historico_la_ventana_se_ancla_en_lo_que_se_duerme_de_verdad():
     assert rec.time_in_bed_minutes == 375 + MAX_WAKE_IN_BED_MINUTES
     assert rec.bedtime == time(23, 15)
     assert any("no añade sueño" in n for n in rec.notes)
+
+
+def test_entrenar_dos_horas_antes_ya_no_penaliza():
+    """La ventana bajó de 3 h a 1 h con la evidencia en la mano.
+
+    Un metaanálisis de 23 estudios no encontró diferencias con ejercicio vespertino;
+    penalizar a tres horas desaconsejaba entrenar por la tarde sin motivo.
+    """
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(exercise_minutes=60, exercise_intensity="hard", exercise_end=time(20, 0)),
+    )
+    assert rec.onset_latency_minutes == 20
+    assert rec.notes == []
+
+
+def test_el_ejercicio_moderado_tardio_no_penaliza():
+    """Solo el vigoroso mueve la latencia; el moderado no."""
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480, onset_latency_minutes=20, efficiency=1.0),
+        DaySignals(exercise_minutes=60, exercise_intensity="moderate", exercise_end=time(22, 0)),
+    )
+    assert rec.onset_latency_minutes == 20
