@@ -14,13 +14,20 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${PORT}`,
+    // Construye en su propio directorio: `dist/` es el que sirve el backend en el
+    // despliegue, y el e2e lo construye con los mocks activados. Compartirlos deja la
+    // app real enseñando datos inventados en cuanto alguien corre los tests.
+    command:
+      `npx vite build --outDir dist-e2e && ` +
+      `npx vite preview --outDir dist-e2e --host 127.0.0.1 --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
       ...process.env,
       VITE_API_BASE_URL: process.env.VITE_API_BASE_URL ?? '',
+      // El e2e corre contra el build real, así que los mocks hay que pedirlos.
+      VITE_ENABLE_MOCKS: 'true',
     },
   },
   projects: [

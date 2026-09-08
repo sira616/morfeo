@@ -18,8 +18,11 @@ export async function startMockWorker() {
     return
   }
 
-  // En preview y e2e (build + MSW) se sigue mockeando si no hay API real.
-  if (import.meta.env.VITE_API_BASE_URL) return
+  // Los mocks en un build son **opt-in**. Antes se activaban cuando VITE_API_BASE_URL
+  // estaba vacío, y eso es exactamente el caso del despliegue real, donde el backend
+  // sirve el frontend desde su mismo origen: la app habría enseñado datos inventados
+  // con toda la naturalidad. Ahora hay que pedirlos, y solo lo hace el e2e.
+  if (import.meta.env.VITE_ENABLE_MOCKS !== 'true') return
 
   try {
     const [{ setupWorker }, { handlers }] = await Promise.all([
