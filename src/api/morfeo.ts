@@ -161,7 +161,8 @@ export function getInsights() {
 
 export type DevUser = {
   id: string
-  email: string
+  username: string
+  email: string | null
   display_name: string | null
   is_admin: boolean
   onboarding_done: boolean

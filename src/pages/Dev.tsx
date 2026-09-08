@@ -7,6 +7,9 @@ import { routes } from '@/router/paths'
 
 const ACTION_LABELS: Record<string, string> = {
   login: 'Inicio de sesión',
+  register: 'Alta de cuenta',
+  password: 'Cambio de contraseña',
+  email: 'Email',
   checkin: 'Check-in',
   nights: 'Alta de noches',
   import: 'Importación',
@@ -44,7 +47,7 @@ export function DevPage() {
       <SurfaceCard className="text-center">
         <p>No se pudo cargar el panel.</p>
         <p className="mt-1 text-body-sm opacity-70">
-          Solo las cuentas de <code>ADMIN_EMAILS</code> tienen acceso.
+          Solo las cuentas de <code>ADMIN_USERNAMES</code> tienen acceso.
         </p>
       </SurfaceCard>
     )
@@ -80,7 +83,7 @@ export function DevPage() {
               <tr key={user.id} className="border-b" style={{ borderColor: 'var(--mf-line)' }}>
                 <th scope="row" className="p-3 text-left font-normal">
                   <Link to={routes.devUser(user.id)} className="underline">
-                    {user.email}
+                    {user.username}
                   </Link>
                   {user.is_admin ? (
                     <ShieldCheck
@@ -130,7 +133,8 @@ export function DevUserPage() {
       </Link>
 
       <SurfaceCard>
-        <h2 className="text-headline-sm font-bold">{user.email}</h2>
+        <h2 className="text-headline-sm font-bold">{user.username}</h2>
+        <p className="text-body-sm opacity-60">{user.email ?? 'sin email'}</p>
         <dl className="mt-3 grid grid-cols-2 gap-3 text-body-sm sm:grid-cols-4">
           <Detail label="Alta" value={onlyDate(user.created_at)} />
           <Detail label="Noches" value={String(user.nights)} />

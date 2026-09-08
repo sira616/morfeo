@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from './test-utils'
 import { CheckinPage } from '@/pages/Checkin'
 import { DevPage } from '@/pages/Dev'
+import { LoginPage } from '@/pages/Login'
+import { ProfilePage } from '@/pages/Profile'
 import { RequireAdmin } from '@/router/RequireAdmin'
 import { mockUser } from '@/mocks/fixtures'
 import { useAuthStore } from '@/stores/authStore'
@@ -72,8 +74,9 @@ describe('Panel de /dev', () => {
     login({ isAdmin: true })
     renderWithProviders(<DevPage />)
 
-    expect(await screen.findByText('demo@morfeo.app')).toBeInTheDocument()
-    expect(screen.getByText('pablo@morfeo.app')).toBeInTheDocument()
+    // La identidad es el usuario, no el email: el panel lista nombres.
+    expect(await screen.findByRole('link', { name: 'demo' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'ronkola' })).toBeInTheDocument()
     expect(screen.getByText(/nunca lo que escribió/i)).toBeInTheDocument()
   })
 
@@ -84,6 +87,60 @@ describe('Panel de /dev', () => {
       { route: '/dev' },
     )
     // Redirige, así que no pinta nada del panel.
-    expect(container).not.toHaveTextContent('demo@morfeo.app')
+    expect(container).not.toHaveTextContent('ronkola')
+  })
+})
+
+describe('Login y registro', () => {
+  it('entra con usuario, sin pedir email', async () => {
+    const user = userEvent.setup()
+    useAuthStore.getState().clearSession()
+    renderWithProviders(<LoginPage />)
+
+    expect(screen.getByLabelText('Usuario o email')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/Email \(opcional\)/)).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Usuario o email'), 'syreta')
+    await user.type(screen.getByLabelText('Contraseña'), 'ContrasenaLarga123')
+    await user.click(screen.getByRole('button', { name: 'Entrar' }))
+
+    await waitFor(() => expect(useAuthStore.getState().accessToken).toBe('mock-access'))
+    expect(useAuthStore.getState().user?.username).toBe('syreta')
+  })
+
+  it('al registrarse el email aparece y se dice que es opcional', async () => {
+    const user = userEvent.setup()
+    useAuthStore.getState().clearSession()
+    renderWithProviders(<LoginPage />)
+
+    await user.click(screen.getByRole('button', { name: 'No tengo cuenta' }))
+    expect(screen.getByLabelText('Email (opcional)')).toBeInTheDocument()
+    expect(screen.getByText(/solo sirve para recuperarla/i)).toBeInTheDocument()
+    expect(screen.getByText(/Mínimo 12 caracteres/i)).toBeInTheDocument()
+  })
+})
+
+describe('Perfil', () => {
+  beforeEach(() => login({ email: null, emailVerified: true }))
+
+  it('avisa de que cambiar la contraseña cierra las sesiones', () => {
+    renderWithProviders(<ProfilePage />)
+    expect(screen.getByText(/Se cierran todas las sesiones/i)).toBeInTheDocument()
+  })
+
+  it('deja claro que la cuenta funciona sin email', () => {
+    renderWithProviders(<ProfilePage />)
+    expect(screen.getByText(/Sin email. La cuenta funciona igual./i)).toBeInTheDocument()
+  })
+
+  it('pide el código tras solicitarlo y dice dónde está si no hay correo', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ProfilePage />)
+
+    await user.type(screen.getByLabelText(/Añadir un email/i), 'yo@example.com')
+    await user.click(screen.getByRole('button', { name: 'Enviarme un código' }))
+
+    expect(await screen.findByLabelText('Código')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/consola/i)
   })
 })

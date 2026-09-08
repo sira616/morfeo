@@ -36,21 +36,44 @@ function unauthorized(request: Request) {
 
 export const handlers = [
   http.post('/api/auth/register', async ({ request }) => {
-    const body = (await request.json()) as { email: string }
-    return HttpResponse.json({ id: 'user-demo', email: body.email }, { status: 201 })
+    const body = (await request.json()) as { username: string; email?: string }
+    user = { ...user, username: body.username, email: body.email ?? null }
+    user = { ...user, emailVerified: !body.email }
+    return HttpResponse.json(
+      { access_token: 'mock-access', refresh_token: 'mock-refresh', user },
+      { status: 201 },
+    )
   }),
 
   http.post('/api/auth/login', async ({ request }) => {
-    const body = (await request.json()) as { email: string; password: string }
+    const body = (await request.json()) as { login: string; password: string }
     if (!body.password) {
-      return HttpResponse.json({ detail: 'Credenciales inválidas' }, { status: 401 })
+      return HttpResponse.json(
+        { detail: 'Usuario o contraseña incorrectos.' },
+        { status: 401 },
+      )
     }
-    user = { ...user, email: body.email }
+    user = { ...user, username: body.login }
     return HttpResponse.json({
       access_token: 'mock-access',
       refresh_token: 'mock-refresh',
       user,
     })
+  }),
+
+  http.post('/api/auth/change-password', () => new HttpResponse(null, { status: 204 })),
+
+  http.post('/api/auth/email', async ({ request }) => {
+    const body = (await request.json()) as { email: string }
+    return HttpResponse.json({ email: body.email, sent_by_email: false })
+  }),
+
+  http.post('/api/auth/email/verify', async ({ request }) => {
+    const body = (await request.json()) as { code: string }
+    // El mock acepta 000000 para poder probar el camino feliz sin backend.
+    return body.code === '000000'
+      ? new HttpResponse(null, { status: 204 })
+      : HttpResponse.json({ detail: 'El código no coincide.' }, { status: 400 })
   }),
 
   http.post('/api/auth/refresh', () => {

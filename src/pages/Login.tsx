@@ -8,21 +8,37 @@ import { login, register } from '@/api/auth'
 import { ApiError } from '@/lib/apiClient'
 import { routes } from '@/router/paths'
 
+const MIN_PASSWORD = 12
+
+/**
+ * Entrar y registrarse en la misma tarjeta.
+ *
+ * La identidad es el **nombre de usuario**: esto se usa entre un par de personas en
+ * una red doméstica, y pedir un correo para entrar en tu propia app de sueño no aporta
+ * nada. El email es opcional y solo sirve para recuperar la contraseña; el campo lo
+ * dice, en vez de dejar que la gente lo adivine.
+ */
 export function LoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [mode, setMode] = useState<'login' | 'register'>('login')
-  const [email, setEmail] = useState('')
+  const [loginName, setLoginName] = useState('')
   const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+
+  const registering = mode === 'register'
+  const tooShort = registering && password.length > 0 && password.length < MIN_PASSWORD
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     setPending(true)
     setError(null)
     try {
-      const user = mode === 'login' ? await login(email, password) : await register(email, password)
+      const user = registering
+        ? await register(loginName, password, email.trim() || undefined)
+        : await login(loginName, password)
       // `next` viene de RequireAuth: se vuelve a donde se intentaba entrar.
       const next = params.get('next')
       navigate(user.onboardingDone ? (next ?? routes.tonight) : routes.onboarding, {
@@ -53,23 +69,44 @@ export function LoginPage() {
 
         <form onSubmit={onSubmit} noValidate>
           <Field
-            id="email"
-            label="Email"
-            type="email"
-            autoComplete="email"
+            id="login"
+            label={registering ? 'Usuario' : 'Usuario o email'}
+            autoComplete={registering ? 'username' : 'username'}
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={loginName}
+            onChange={(e) => setLoginName(e.target.value)}
           />
+
+          {registering ? (
+            <Field
+              id="email"
+              label="Email (opcional)"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          ) : null}
+
           <Field
             id="password"
             label="Contraseña"
             type="password"
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+            autoComplete={registering ? 'new-password' : 'current-password'}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+
+          {registering ? (
+            <p
+              className="mb-3 text-body-sm"
+              style={{ color: tooShort ? 'var(--mf-chart-awake)' : undefined, opacity: 0.75 }}
+            >
+              Mínimo {MIN_PASSWORD} caracteres, con mayúscula, minúscula y número. El email
+              solo sirve para recuperarla si se te olvida.
+            </p>
+          ) : null}
 
           {error ? (
             <p role="alert" className="mb-3 text-body-sm text-error">
@@ -78,7 +115,7 @@ export function LoginPage() {
           ) : null}
 
           <Button type="submit" fullWidth disabled={pending}>
-            {pending ? 'Un momento…' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+            {pending ? 'Un momento…' : registering ? 'Crear cuenta' : 'Entrar'}
           </Button>
         </form>
 
@@ -87,11 +124,11 @@ export function LoginPage() {
           fullWidth
           className="mt-2"
           onClick={() => {
-            setMode(mode === 'login' ? 'register' : 'login')
+            setMode(registering ? 'login' : 'register')
             setError(null)
           }}
         >
-          {mode === 'login' ? 'No tengo cuenta' : 'Ya tengo cuenta'}
+          {registering ? 'Ya tengo cuenta' : 'No tengo cuenta'}
         </Button>
       </SurfaceCard>
     </main>

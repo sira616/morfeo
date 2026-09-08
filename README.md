@@ -61,7 +61,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `npm run dev:lan` | Igual, pero accesible desde el móvil en la misma wifi |
 | `npm run typecheck` | `tsc -b` |
 | `npm run lint` | oxlint |
-| `npm test` | Vitest (63 tests) |
+| `npm test` | Vitest (77 tests) |
 | `npm run test:e2e` | Playwright sobre el build real |
 | `npm run build` | Build de producción |
 
@@ -73,7 +73,8 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `/check-in` | El check-in del día, conversando o rellenando |
 | `/historial` | Historial denso: gráfica, regularidad, jet lag social, heatmap de ocho semanas y recomendado frente a real |
 | `/reloj` | Importar la exportación del reloj |
-| `/perfil` | Hora de despertar, necesidad de sueño, latencia |
+| `/perfil` | Horarios, cuenta, email opcional y cambio de contraseña |
+| `/dev` | Panel de administración. Solo visible para cuentas de `ADMIN_USERNAMES` |
 | `/empezar` | Onboarding de tres preguntas |
 
 ### Dos formas del mismo shell, no una estirada
@@ -86,6 +87,15 @@ que se merezca el ancho.
 
 El reparto de trabajo entre pantallas también es deliberado: la portada respira y dice
 una cosa; el historial es denso, porque es donde se miran patrones.
+
+### Se entra con usuario, no con email
+
+La identidad es el nombre de usuario. El email es opcional y el formulario dice para
+qué sirve —recuperar la contraseña— en vez de dejar que se adivine.
+
+Cambiar la contraseña cierra **todas** las sesiones, también la de la pestaña donde se
+cambia: el backend revoca los refresh, así que quedarse ahí solo llevaría al siguiente
+401. La pantalla lo avisa antes y devuelve al login al terminar.
 
 ### El color tiene una regla
 

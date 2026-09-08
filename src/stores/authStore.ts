@@ -2,7 +2,10 @@ import { create } from 'zustand'
 
 export type AuthUser = {
   id: string
-  email: string
+  /** La identidad. El email es opcional y solo sirve para recuperar la contraseña. */
+  username: string
+  email: string | null
+  emailVerified: boolean
   displayName: string
   onboardingDone: boolean
   isAdmin: boolean

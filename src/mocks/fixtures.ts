@@ -11,7 +11,9 @@ import type {
 
 export const mockUser: AuthUser = {
   id: 'user-demo',
-  email: 'demo@morfeo.app',
+  username: 'demo',
+  email: null,
+  emailVerified: true,
   displayName: 'Demo',
   onboardingDone: true,
   isAdmin: true,
@@ -199,7 +201,8 @@ export const mockTips: TipsToday = {
 export const mockDevUsers: DevUser[] = [
   {
     id: 'user-demo',
-    email: 'demo@morfeo.app',
+    username: 'demo',
+    email: null,
     display_name: 'Demo',
     is_admin: true,
     onboarding_done: true,
@@ -213,7 +216,8 @@ export const mockDevUsers: DevUser[] = [
   },
   {
     id: 'user-pablo',
-    email: 'pablo@morfeo.app',
+    username: 'ronkola',
+    email: null,
     display_name: null,
     is_admin: false,
     onboarding_done: true,

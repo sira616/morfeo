@@ -11,8 +11,8 @@ test('entrar y ver la ventana de esta noche', async ({ page }) => {
   // Sin sesión, el guard manda al login conservando el destino en `next`.
   await expect(page).toHaveURL(/\/login/)
 
-  await page.getByLabel('Email').fill('demo@morfeo.app')
-  await page.getByLabel('Contraseña').fill('contrasena-de-prueba')
+  await page.getByLabel('Usuario o email').fill('demo')
+  await page.getByLabel('Contraseña').fill('ContrasenaLarga123')
   await page.getByRole('button', { name: 'Entrar' }).click()
 
   await expect(page.getByText('A la cama entre')).toBeVisible()
@@ -22,8 +22,8 @@ test('entrar y ver la ventana de esta noche', async ({ page }) => {
 
 test('la navegación llega al historial y al importador', async ({ page }) => {
   await page.goto('/login')
-  await page.getByLabel('Email').fill('demo@morfeo.app')
-  await page.getByLabel('Contraseña').fill('contrasena-de-prueba')
+  await page.getByLabel('Usuario o email').fill('demo')
+  await page.getByLabel('Contraseña').fill('ContrasenaLarga123')
   await page.getByRole('button', { name: 'Entrar' }).click()
 
   await page.getByRole('link', { name: 'Historial' }).click()
