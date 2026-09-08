@@ -73,11 +73,12 @@ export function ChatComposer({
         aria-label="Enviar mensaje"
         disabled={disabled || !draft.trim()}
         className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] transition-transform active:scale-95 disabled:opacity-50"
+        // Enviar es una acción, así que va en indigo. El verde queda para lo que
+        // informa (ver el reparto de color en tokens.css).
         style={{
-          color: 'var(--mf-on-brand)',
-          background:
-            'linear-gradient(145deg, var(--mf-brand-yellow), #e6c22e 45%, var(--mf-brand-green))',
-          boxShadow: 'var(--mf-shadow-brand)',
+          color: 'var(--mf-on-primary)',
+          background: 'linear-gradient(145deg, var(--mf-indigo-2), var(--mf-indigo))',
+          boxShadow: 'var(--mf-shadow-glow)',
         }}
       >
         <Send size={18} aria-hidden />

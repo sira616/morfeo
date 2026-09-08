@@ -27,8 +27,10 @@
   /* Brand logo palette */
   --mf-brand-navy: #0b0e14;
   --mf-brand-yellow: #f5d23a;
-  --mf-brand-green: #9adf3f;
-  --mf-brand-green-dim: #6fad28;
+  /* Verde de estado y datos. El lima de Plátano (#9adf3f) era de bebida energética;
+     este menta da 9.85:1 sobre las tarjetas, así que vale también como texto. */
+  --mf-brand-green: #4fd6a0;
+  --mf-brand-green-dim: #2e8f6c;
   --mf-accent-text: var(--mf-brand-green);
   --mf-on-brand: #0b0e14;
   --mf-on-teal-chip: #052e2a;
@@ -39,7 +41,7 @@
     0 12px 30px -14px rgba(0, 0, 0, 0.7), 0 2px 8px -4px rgba(0, 0, 0, 0.5);
   --mf-shadow-glow: 0 10px 34px -14px rgba(108, 92, 231, 0.6);
   --mf-shadow-brand:
-    0 18px 50px -20px rgba(154, 223, 63, 0.35),
+    0 18px 50px -20px rgba(79, 214, 160, 0.3),
     0 8px 28px -16px rgba(245, 210, 58, 0.25);
 
   /* Decorative accents (theme-aware) */
@@ -47,9 +49,9 @@
   --mf-sheen-strong: rgba(255, 255, 255, 0.16);
   --mf-inset-shine: rgba(255, 255, 255, 0.28);
   --mf-control-hover: rgba(255, 255, 255, 0.06);
-  --mf-tint-brand: rgba(154, 223, 63, 0.14);
-  --mf-tint-brand-soft: rgba(154, 223, 63, 0.03);
-  --mf-tint-brand-border: rgba(154, 223, 63, 0.3);
+  --mf-tint-brand: rgba(79, 214, 160, 0.14);
+  --mf-tint-brand-soft: rgba(79, 214, 160, 0.04);
+  --mf-tint-brand-border: rgba(79, 214, 160, 0.32);
   --mf-tint-teal: rgba(63, 209, 192, 0.1);
   --mf-tint-teal-border: rgba(63, 209, 192, 0.22);
   --mf-tint-indigo: rgba(108, 92, 231, 0.12);
@@ -174,6 +176,21 @@
   --mf-node-available: var(--mf-indigo-2);
   --mf-node-active: var(--mf-gold);
   --mf-node-done: var(--mf-brand-green);
+
+  /* --- Papel del color -------------------------------------------------------
+     La regla que mantiene la interfaz legible: si se puede pulsar, indigo; si te
+     informa de cómo va la cosa, verde. Los tokens de abajo existen para que esa
+     regla se cumpla sola en vez de depender de que cada componente la recuerde. */
+  --mf-good: var(--mf-brand-green);
+  --mf-good-dim: var(--mf-brand-green-dim);
+  --mf-good-tint: var(--mf-tint-brand);
+  --mf-good-border: var(--mf-tint-brand-border);
+
+  /* Series de las gráficas: dormido, en la cama, vigilia. */
+  --mf-chart-sleep: var(--mf-brand-green);
+  --mf-chart-in-bed: var(--mf-line-strong);
+  --mf-chart-awake: var(--mf-gold);
+  --mf-chart-recommended: var(--mf-indigo-2);
 }
 
 /* Light theme — brand-tinted whites, navy ink, readable accents */
@@ -218,9 +235,9 @@
   --mf-red: #c03940;
   --mf-blue: #1a5fd0;
 
-  --mf-brand-green: #8bc92f;
-  --mf-brand-green-dim: #5f9e1f;
-  --mf-accent-text: #3f7014;
+  --mf-brand-green: #0f6b4d;
+  --mf-brand-green-dim: #0a4f39;
+  --mf-accent-text: #0f6b4d;
   --mf-on-brand: #0b0e14;
   --mf-on-teal-chip: #04312c;
   --mf-on-gold-chip: #2a1c04;

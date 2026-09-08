@@ -65,14 +65,14 @@ export const DARK_AA_PAIRS: ContrastPair[] = [
   {
     id: 'dark-on-brand-green',
     foreground: '#0b0e14',
-    background: '#9adf3f',
-    usage: 'CTA text on brand green',
+    background: '#4fd6a0',
+    usage: 'Texto sobre el verde de estado',
   },
   {
     id: 'dark-accent-link',
-    foreground: '#9adf3f',
+    foreground: '#4fd6a0',
     background: '#0b0e14',
-    usage: 'Accent links on canvas',
+    usage: 'Verde de estado sobre el lienzo',
   },
   {
     id: 'dark-teal-on-surf',
@@ -140,15 +140,15 @@ export const LIGHT_AA_PAIRS: ContrastPair[] = [
   },
   {
     id: 'light-accent-link-on-surf',
-    foreground: '#3f7014',
+    foreground: '#0f6b4d',
     background: '#ffffff',
     usage: 'Accent links on cards',
   },
   {
     id: 'light-accent-link-on-canvas',
-    foreground: '#3f7014',
+    foreground: '#0f6b4d',
     background: '#f3f5f0',
-    usage: 'Accent links on canvas',
+    usage: 'Verde de estado sobre el lienzo',
   },
   {
     id: 'light-on-primary',
@@ -163,10 +163,12 @@ export const LIGHT_AA_PAIRS: ContrastPair[] = [
     usage: 'CTA text on brand yellow',
   },
   {
+    // En tema claro el verde de estado es oscuro y se usa como texto o como relleno
+    // con texto blanco encima, no como fondo de tinta oscura.
     id: 'light-on-brand-green',
-    foreground: '#0b0e14',
-    background: '#8bc92f',
-    usage: 'CTA text on brand green',
+    foreground: '#ffffff',
+    background: '#0f6b4d',
+    usage: 'Texto sobre el verde de estado',
   },
   {
     id: 'light-teal-on-tint',

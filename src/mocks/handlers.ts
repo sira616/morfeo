@@ -1,5 +1,5 @@
 import { HttpResponse, http } from 'msw'
-import { mockNights, mockRecommendation, mockUser } from '@/mocks/fixtures'
+import { mockInsights, mockNights, mockRecommendation, mockTips, mockUser } from '@/mocks/fixtures'
 import { createCheckinSseStream } from '@/mocks/sse'
 import type { Night, Recommendation } from '@/api/morfeo'
 
@@ -131,6 +131,18 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ day: '2026-09-06', saved: Object.keys(body) })
   }),
+
+  http.get('/api/tips/today', ({ request }) =>
+    unauthorized(request)
+      ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
+      : HttpResponse.json(mockTips),
+  ),
+
+  http.get('/api/insights', ({ request }) =>
+    unauthorized(request)
+      ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
+      : HttpResponse.json(mockInsights),
+  ),
 
   http.post('/api/checkin/stream', async ({ request }) => {
     const body = (await request.json()) as { message: string }

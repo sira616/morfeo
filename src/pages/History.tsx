@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
-import { getNights, type Night } from '@/api/morfeo'
+import { SleepHeatmap } from '@/components/insights/SleepHeatmap'
+import { RegularityCard } from '@/components/insights/RegularityCard'
+import { AdherenceCard } from '@/components/insights/AdherenceCard'
+import { getInsights, getNights, type Night } from '@/api/morfeo'
 
 const CHART_HEIGHT = 120
 const BAR_GAP = 2
@@ -42,14 +45,14 @@ function SleepChart({ nights }: { nights: Night[] }) {
               y={CHART_HEIGHT - inBed}
               width={barWidth - BAR_GAP}
               height={inBed}
-              fill="var(--mf-line-strong)"
+              fill="var(--mf-chart-in-bed)"
             />
             <rect
               x={x}
               y={CHART_HEIGHT - slept}
               width={barWidth - BAR_GAP}
               height={slept}
-              fill="currentColor"
+              fill="var(--mf-chart-sleep)"
             />
           </g>
         )
@@ -58,11 +61,16 @@ function SleepChart({ nights }: { nights: Night[] }) {
   )
 }
 
+/**
+ * Aquí sí toca densidad. La portada dice una cosa; esta pantalla es para mirar
+ * patrones, y para eso hacen falta varios módulos a la vez.
+ */
 export function HistoryPage() {
   const { data: nights = [], isLoading } = useQuery({
     queryKey: ['nights'],
     queryFn: () => getNights(30),
   })
+  const { data: insights } = useQuery({ queryKey: ['insights'], queryFn: getInsights })
 
   if (isLoading) return <p className="py-8 text-center opacity-70">Cargando…</p>
 
@@ -80,35 +88,56 @@ export function HistoryPage() {
   const avgSleep = Math.round(
     nights.reduce((sum, n) => sum + n.total_sleep_minutes, 0) / nights.length,
   )
-  const avgEfficiency =
-    nights.reduce((sum, n) => sum + n.efficiency, 0) / nights.length
+  const avgEfficiency = nights.reduce((sum, n) => sum + n.efficiency, 0) / nights.length
 
   return (
-    <div className="flex flex-col gap-4">
-      <SurfaceCard>
-        <h2 className="mb-2 text-headline-sm font-bold">Últimas {nights.length} noches</h2>
-        <SleepChart nights={nights} />
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-body-sm">
-          <div>
-            <dt className="opacity-70">Sueño medio</dt>
-            <dd className="text-headline-sm font-bold tabular-nums">{duration(avgSleep)}</dd>
-          </div>
-          <div>
-            <dt className="opacity-70">Eficiencia media</dt>
-            <dd className="text-headline-sm font-bold tabular-nums">
-              {Math.round(avgEfficiency * 100)}%
-            </dd>
-          </div>
-        </dl>
-        {/* Esta es la eficiencia clásica, la que reporta el reloj. El motor usa una
-            variante que descuenta la latencia, así que no se promete aquí lo que va a
-            decidir: esa decisión, con su propio número, se explica en «Esta noche». */}
-        <p className="mt-3 text-body-sm opacity-70">
-          Eficiencia clásica: dormido frente al tiempo total en la cama, incluidos los
-          minutos que tardas en dormirte. El motor descuenta esa latencia para decidir
-          la ventana, así que su número no coincide exactamente con este.
-        </p>
-      </SurfaceCard>
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Stat label="Sueño medio" value={duration(avgSleep)} />
+        <Stat
+          label="Eficiencia media"
+          value={`${Math.round(avgEfficiency * 100)}%`}
+          good={avgEfficiency >= 0.85}
+        />
+        <Stat
+          label="Noches medidas"
+          value={String(nights.length)}
+          hint="de las últimas 30"
+        />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SurfaceCard>
+          <h2 className="mb-2 text-headline-sm font-bold">Últimas {nights.length} noches</h2>
+          <SleepChart nights={nights} />
+          {/* Esta es la eficiencia clásica, la que reporta el reloj. El motor usa una
+              variante que descuenta la latencia, así que no se promete aquí lo que va a
+              decidir: esa decisión, con su propio número, se explica en «Esta noche». */}
+          <p className="mt-3 text-body-sm opacity-70">
+            Eficiencia clásica: dormido frente al tiempo total en la cama, incluidos los
+            minutos que tardas en dormirte. El motor descuenta esa latencia para decidir
+            la ventana, así que su número no coincide exactamente con este.
+          </p>
+        </SurfaceCard>
+
+        {insights ? (
+          <RegularityCard
+            regularity={insights.regularity}
+            jetlag={insights.social_jetlag}
+          />
+        ) : null}
+      </div>
+
+      {insights ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SleepHeatmap nights={insights.heatmap} />
+          <AdherenceCard
+            streak={insights.adherence.streak}
+            rate={insights.adherence.rate}
+            series={insights.adherence.series}
+          />
+        </div>
+      ) : null}
 
       <SurfaceCard padded={false}>
         <table className="w-full text-body-sm">
@@ -123,16 +152,56 @@ export function HistoryPage() {
           </thead>
           <tbody>
             {[...nights].reverse().map((night) => (
-              <tr key={night.night_of} className="border-b" style={{ borderColor: 'var(--mf-line)' }}>
-                <th scope="row" className="p-2 text-left font-normal">{night.night_of}</th>
-                <td className="p-2 text-right tabular-nums">{duration(night.total_sleep_minutes)}</td>
-                <td className="p-2 text-right tabular-nums">{duration(night.time_in_bed_minutes)}</td>
-                <td className="p-2 text-right tabular-nums">{Math.round(night.efficiency * 100)}%</td>
+              <tr
+                key={night.night_of}
+                className="border-b"
+                style={{ borderColor: 'var(--mf-line)' }}
+              >
+                <th scope="row" className="p-2 text-left font-normal">
+                  {night.night_of}
+                </th>
+                <td className="p-2 text-right tabular-nums">
+                  {duration(night.total_sleep_minutes)}
+                </td>
+                <td className="p-2 text-right tabular-nums">
+                  {duration(night.time_in_bed_minutes)}
+                </td>
+                <td
+                  className="p-2 text-right tabular-nums"
+                  style={{ color: night.efficiency >= 0.85 ? 'var(--mf-good)' : undefined }}
+                >
+                  {Math.round(night.efficiency * 100)}%
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </SurfaceCard>
     </div>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+  good,
+}: {
+  label: string
+  value: string
+  hint?: string
+  good?: boolean
+}) {
+  return (
+    <SurfaceCard>
+      <p className="text-body-sm opacity-60">{label}</p>
+      <p
+        className="text-display-md font-bold tabular-nums"
+        style={good ? { color: 'var(--mf-good)' } : undefined}
+      >
+        {value}
+      </p>
+      {hint ? <p className="text-body-sm opacity-50">{hint}</p> : null}
+    </SurfaceCard>
   )
 }

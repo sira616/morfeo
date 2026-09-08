@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, Info } from 'lucide-react'
 import { Button } from '@/components/atoms/Button'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
+import { NightArc } from '@/components/night/NightArc'
+import { TipsCard } from '@/components/night/TipsCard'
 import { getTonight, markFollowed, type Recommendation } from '@/api/morfeo'
 import { routes } from '@/router/paths'
 
@@ -23,6 +25,13 @@ const CONFIDENCE_COPY: Record<Recommendation['confidence'], string> = {
   alta: 'Basada en dos semanas o más de noches medidas.',
 }
 
+/**
+ * La portada respira: dice una cosa y la explica.
+ *
+ * En escritorio se parte en dos columnas — la noche a la izquierda, el porqué y los
+ * consejos a la derecha — en vez de apilar las mismas tarjetas con más margen. Una
+ * columna de móvil centrada en un monitor no se arregla con espaciado.
+ */
 export function TonightPage() {
   const queryClient = useQueryClient()
   const [simulatedWake, setSimulatedWake] = useState<string>('')
@@ -47,135 +56,150 @@ export function TonightPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <SurfaceCard className="text-center">
-        <p className="text-body-sm opacity-70">A la cama entre</p>
-        <p className="text-display-md font-bold tabular-nums">
-          {hhmm(data.window_start)} – {hhmm(data.window_end)}
-        </p>
-        {/* La distinción que da sentido a la app: la hora es de meterse en la cama. */}
-        <p className="mt-2 text-body-sm opacity-80">
-          No es la hora de dormirte. Cuentas con {data.onset_latency_minutes} min para
-          conciliar, así que dormirías sobre las{' '}
-          <strong className="tabular-nums">
-            {addMinutes(data.bedtime, data.onset_latency_minutes)}
-          </strong>
-          .
-        </p>
-        {/* Cuando el motor recorta la ventana por debajo del objetivo, enseñar las dos
-            cifras juntas se lee como una contradicción. Se dice cuál manda. */}
-        {data.time_in_bed_minutes < data.target_sleep_minutes ? (
-          <p className="mt-3 text-body-sm opacity-70">
-            {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
-            {hhmm(data.wake_target)}
-            <span className="block">
-              Tu objetivo teórico serían {duration(data.target_sleep_minutes)}, pero la
-              ventana se acorta a propósito. El motivo, abajo.
-            </span>
+    <div className="grid items-start gap-6 lg:grid-cols-2 lg:gap-8">
+      {/* --- Columna izquierda: la noche --- */}
+      <div className="flex flex-col gap-6">
+        <SurfaceCard className="text-center">
+          <p className="text-body-sm opacity-70">A la cama entre</p>
+          <p className="text-display-md font-bold tabular-nums">
+            {hhmm(data.window_start)} – {hhmm(data.window_end)}
           </p>
-        ) : (
-          <p className="mt-3 text-body-sm opacity-70">
-            Objetivo: {duration(data.target_sleep_minutes)} de sueño ·{' '}
-            {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
-            {hhmm(data.wake_target)}
+          <p className="mt-1 text-body-sm opacity-80">
+            No es la hora de dormirte: entre una cosa y otra hay{' '}
+            {data.onset_latency_minutes} min de conciliación.
           </p>
-        )}
-      </SurfaceCard>
 
-      {data.mode === 'restriccion' ? (
-        <SurfaceCard>
-          <p className="flex items-start gap-2 text-body-sm">
-            <AlertTriangle aria-hidden size={18} className="mt-0.5 shrink-0" />
-            <span>
-              <strong>Ventana comprimida a propósito.</strong> Puede parecer poco tiempo, y
-              es intencionado: mira la explicación de abajo antes de ampliarla por tu cuenta.
-            </span>
-          </p>
+          <div className="mt-4">
+            <NightArc recommendation={data} />
+          </div>
+
+          {/* Cuando el motor recorta la ventana por debajo del objetivo, enseñar las dos
+              cifras juntas se lee como una contradicción. Se dice cuál manda. */}
+          {data.time_in_bed_minutes < data.target_sleep_minutes ? (
+            <p className="mt-3 text-body-sm opacity-70">
+              {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
+              {hhmm(data.wake_target)}
+              <span className="block">
+                Tu objetivo teórico serían {duration(data.target_sleep_minutes)}, pero la
+                ventana se acorta a propósito. El motivo, al lado.
+              </span>
+            </p>
+          ) : (
+            <p className="mt-3 text-body-sm opacity-70">
+              Objetivo: {duration(data.target_sleep_minutes)} de sueño ·{' '}
+              {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
+              {hhmm(data.wake_target)}
+            </p>
+          )}
         </SurfaceCard>
-      ) : null}
 
-      <SurfaceCard>
-        <h2 className="mb-2 text-headline-sm font-bold">Por qué esta hora</h2>
-        <ul className="flex flex-col gap-2">
-          {data.factors.map((factor) => (
-            <li key={factor.label} className="flex items-baseline justify-between gap-3">
+        {data.mode === 'restriccion' ? (
+          <SurfaceCard>
+            <p className="flex items-start gap-2 text-body-sm">
+              <AlertTriangle
+                aria-hidden
+                size={18}
+                className="mt-0.5 shrink-0"
+                style={{ color: 'var(--mf-chart-awake)' }}
+              />
               <span>
-                <strong>{factor.label}</strong>
-                <span className="block text-body-sm opacity-70">{factor.detail}</span>
+                <strong>Ventana comprimida a propósito.</strong> Puede parecer poco tiempo,
+                y es intencionado: mira la explicación antes de ampliarla por tu cuenta.
               </span>
-              <span className="shrink-0 tabular-nums">
-                {factor.minutes > 0 ? '+' : ''}
-                {factor.minutes} min
-              </span>
-            </li>
-          ))}
-        </ul>
-        {data.notes.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-2 border-t pt-3" style={{ borderColor: 'var(--mf-line)' }}>
-            {data.notes.map((note) => (
-              <li key={note} className="flex items-start gap-2 text-body-sm">
-                <Info aria-hidden size={16} className="mt-0.5 shrink-0" />
-                {note}
+            </p>
+          </SurfaceCard>
+        ) : null}
+
+        <SurfaceCard>
+          <label htmlFor="wake" className="text-body-sm font-semibold">
+            ¿Y si mañana te levantas a otra hora?
+          </label>
+          <p className="mb-2 text-body-sm opacity-70">
+            Solo simula: no cambia tu perfil ni se guarda.
+          </p>
+          <div className="flex gap-2">
+            <input
+              id="wake"
+              type="time"
+              value={simulatedWake ? simulatedWake.slice(0, 5) : ''}
+              onChange={(e) => setSimulatedWake(e.target.value ? `${e.target.value}:00` : '')}
+              className="min-h-touch flex-1 rounded-md px-3"
+              style={{
+                background: 'var(--mf-surf-2)',
+                border: '1px solid var(--mf-line-strong)',
+              }}
+            />
+            <Button variant="ghost" onClick={() => setSimulatedWake('')} disabled={!simulatedWake}>
+              Quitar
+            </Button>
+          </div>
+        </SurfaceCard>
+
+        {!simulatedWake ? (
+          <div className="flex gap-2">
+            <Button
+              fullWidth
+              variant={data.followed === true ? 'primary' : 'secondary'}
+              onClick={() => follow.mutate(true)}
+            >
+              La seguí
+            </Button>
+            <Button
+              fullWidth
+              variant={data.followed === false ? 'primary' : 'ghost'}
+              onClick={() => follow.mutate(false)}
+            >
+              No la seguí
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      {/* --- Columna derecha: el porqué y los consejos --- */}
+      <div className="flex flex-col gap-6">
+        <SurfaceCard>
+          <h2 className="mb-2 text-headline-sm font-bold">Por qué esta hora</h2>
+          <ul className="flex flex-col gap-2">
+            {data.factors.map((factor) => (
+              <li key={factor.label} className="flex items-baseline justify-between gap-3">
+                <span>
+                  <strong>{factor.label}</strong>
+                  <span className="block text-body-sm opacity-70">{factor.detail}</span>
+                </span>
+                <span
+                  className="shrink-0 tabular-nums"
+                  style={{ color: factor.minutes < 0 ? 'var(--mf-good)' : undefined }}
+                >
+                  {factor.minutes > 0 ? '+' : ''}
+                  {factor.minutes} min
+                </span>
               </li>
             ))}
           </ul>
-        ) : null}
-        <p className="mt-3 text-body-sm opacity-70">
-          Confianza {data.confidence}. {CONFIDENCE_COPY[data.confidence]}
-        </p>
-      </SurfaceCard>
+          {data.notes.length > 0 ? (
+            <ul
+              className="mt-3 flex flex-col gap-2 border-t pt-3"
+              style={{ borderColor: 'var(--mf-line)' }}
+            >
+              {data.notes.map((note) => (
+                <li key={note} className="flex items-start gap-2 text-body-sm">
+                  <Info aria-hidden size={16} className="mt-0.5 shrink-0" />
+                  {note}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-3 text-body-sm opacity-70">
+            Confianza {data.confidence}. {CONFIDENCE_COPY[data.confidence]}
+          </p>
+        </SurfaceCard>
 
-      <SurfaceCard>
-        <label htmlFor="wake" className="text-body-sm font-semibold">
-          ¿Y si mañana te levantas a otra hora?
-        </label>
-        <p className="mb-2 text-body-sm opacity-70">
-          Solo simula: no cambia tu perfil ni se guarda.
-        </p>
-        <div className="flex gap-2">
-          <input
-            id="wake"
-            type="time"
-            value={simulatedWake ? simulatedWake.slice(0, 5) : ''}
-            onChange={(e) => setSimulatedWake(e.target.value ? `${e.target.value}:00` : '')}
-            className="min-h-touch flex-1 rounded-md px-3"
-            style={{ background: 'var(--mf-surf-2)', border: '1px solid var(--mf-line-strong)' }}
-          />
-          <Button variant="ghost" onClick={() => setSimulatedWake('')} disabled={!simulatedWake}>
-            Quitar
-          </Button>
-        </div>
-      </SurfaceCard>
+        <TipsCard />
 
-      {!simulatedWake ? (
-        <div className="flex gap-2">
-          <Button
-            fullWidth
-            variant={data.followed === true ? 'primary' : 'secondary'}
-            onClick={() => follow.mutate(true)}
-          >
-            La seguí
-          </Button>
-          <Button
-            fullWidth
-            variant={data.followed === false ? 'primary' : 'ghost'}
-            onClick={() => follow.mutate(false)}
-          >
-            No la seguí
-          </Button>
-        </div>
-      ) : null}
-
-      <Link to={routes.checkin} className="text-center text-body-sm underline">
-        Contarle cómo ha ido el día
-      </Link>
+        <Link to={routes.checkin} className="text-center text-body-sm underline">
+          Contarle cómo ha ido el día
+        </Link>
+      </div>
     </div>
   )
-}
-
-/** Suma minutos a un "HH:MM:SS" y devuelve "HH:MM", cruzando medianoche. */
-function addMinutes(time: string, minutes: number): string {
-  const [h, m] = time.split(':').map(Number)
-  const total = ((h ?? 0) * 60 + (m ?? 0) + minutes + 1440) % 1440
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }

@@ -74,6 +74,16 @@
   --color-brand-yellow: var(--mf-brand-yellow);
   --color-brand-green: var(--mf-brand-green);
   --color-accent-text: var(--mf-accent-text);
+
+  /* Verde = estado y datos. Indigo = acción. Ver tokens.css. */
+  --color-good: var(--mf-good);
+  --color-good-dim: var(--mf-good-dim);
+  --color-good-tint: var(--mf-good-tint);
+  --color-good-border: var(--mf-good-border);
+  --color-chart-sleep: var(--mf-chart-sleep);
+  --color-chart-in-bed: var(--mf-chart-in-bed);
+  --color-chart-awake: var(--mf-chart-awake);
+  --color-chart-recommended: var(--mf-chart-recommended);
   --color-on-brand: var(--mf-on-brand);
 
   --font-sans: var(--mf-font-sans);

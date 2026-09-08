@@ -76,3 +76,65 @@ export function importNights(content: string, format: 'json' | 'csv') {
     body: { content, format },
   })
 }
+
+export type Tip = {
+  id: string
+  title: string
+  body: string
+  category: string
+  evidence: 'alta' | 'media' | 'baja'
+  source: string
+  /** True cuando sale por algo que pasa hoy, no por relleno. */
+  relevant: boolean
+}
+
+export type TipsToday = {
+  day: string
+  signals: string[]
+  tips: Tip[]
+}
+
+export type Regularity = {
+  score: number
+  sd_minutes: number
+  mean_midpoint_minutes: number
+  nights: number
+}
+
+export type SocialJetlag = {
+  minutes: number
+  weekday_midpoint_minutes: number
+  weekend_midpoint_minutes: number
+  weekday_nights: number
+  weekend_nights: number
+}
+
+export type AdherenceNight = {
+  day: string
+  recommended: string
+  /** Falta cuando el reloj no trajo la hora real de acostarse. */
+  actual: string | null
+  followed: boolean | null
+}
+
+export type HeatmapNight = {
+  night_of: string
+  total_sleep_minutes: number
+  efficiency: number
+}
+
+export type Insights = {
+  /** Null, no cero: sin noches suficientes no hay métrica que enseñar. */
+  regularity: Regularity | null
+  social_jetlag: SocialJetlag | null
+  adherence: { streak: number; rate: number | null; series: AdherenceNight[] }
+  heatmap: HeatmapNight[]
+}
+
+export function getTips() {
+  return apiClient<TipsToday>('/api/tips/today')
+}
+
+export function getInsights() {
+  return apiClient<Insights>('/api/insights')
+}
