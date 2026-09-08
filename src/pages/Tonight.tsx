@@ -62,11 +62,24 @@ export function TonightPage() {
           </strong>
           .
         </p>
-        <p className="mt-3 text-body-sm opacity-70">
-          Objetivo: {duration(data.target_sleep_minutes)} de sueño ·{' '}
-          {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
-          {hhmm(data.wake_target)}
-        </p>
+        {/* Cuando el motor recorta la ventana por debajo del objetivo, enseñar las dos
+            cifras juntas se lee como una contradicción. Se dice cuál manda. */}
+        {data.time_in_bed_minutes < data.target_sleep_minutes ? (
+          <p className="mt-3 text-body-sm opacity-70">
+            {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
+            {hhmm(data.wake_target)}
+            <span className="block">
+              Tu objetivo teórico serían {duration(data.target_sleep_minutes)}, pero la
+              ventana se acorta a propósito. El motivo, abajo.
+            </span>
+          </p>
+        ) : (
+          <p className="mt-3 text-body-sm opacity-70">
+            Objetivo: {duration(data.target_sleep_minutes)} de sueño ·{' '}
+            {duration(data.time_in_bed_minutes)} en la cama · despertar a{' '}
+            {hhmm(data.wake_target)}
+          </p>
+        )}
       </SurfaceCard>
 
       {data.mode === 'restriccion' ? (

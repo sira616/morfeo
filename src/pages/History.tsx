@@ -100,12 +100,14 @@ export function HistoryPage() {
             </dd>
           </div>
         </dl>
-        {avgEfficiency < 0.85 ? (
-          <p className="mt-3 text-body-sm opacity-80">
-            Por debajo del 85% la app comprime tu ventana en vez de ampliarla. Es
-            intencionado: pasar horas despierta en la cama empeora la conciliación.
-          </p>
-        ) : null}
+        {/* Esta es la eficiencia clásica, la que reporta el reloj. El motor usa una
+            variante que descuenta la latencia, así que no se promete aquí lo que va a
+            decidir: esa decisión, con su propio número, se explica en «Esta noche». */}
+        <p className="mt-3 text-body-sm opacity-70">
+          Eficiencia clásica: dormido frente al tiempo total en la cama, incluidos los
+          minutos que tardas en dormirte. El motor descuenta esa latencia para decidir
+          la ventana, así que su número no coincide exactamente con este.
+        </p>
       </SurfaceCard>
 
       <SurfaceCard padded={false}>
