@@ -103,11 +103,16 @@ export const handlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
-  http.get('/api/sleep/nights', ({ request }) =>
-    unauthorized(request)
-      ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
-      : HttpResponse.json(nights),
-  ),
+  http.get('/api/sleep/nights', ({ request }) => {
+    if (unauthorized(request)) {
+      return HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
+    }
+    // El backend respeta `days`; el mock también, o la pantalla miente sobre cuántas
+    // noches está enseñando.
+    const days = Number(new URL(request.url).searchParams.get('days') ?? 30)
+    // Las más recientes, sin romper el orden ascendente que da el backend.
+    return HttpResponse.json(nights.slice(-days))
+  }),
 
   http.post('/api/sleep/import', async ({ request }) => {
     const body = (await request.json()) as { content: string; format: string }

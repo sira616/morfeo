@@ -19,15 +19,24 @@ function daysAgo(days: number): string {
   return date.toISOString().slice(0, 10)
 }
 
+const MOCK_NIGHT_COUNT = 42
+
 /**
- * Una racha de eficiencia baja a propósito: es el caso interesante, el que dispara el
- * modo restricción, y el que hay que poder ver sin esperar dos semanas de datos reales.
+ * Seis semanas de noches, **de la más antigua a la más reciente**, igual que las
+ * devuelve el backend. Si el mock las diera al revés, la tabla y la gráfica se leerían
+ * invertidas en desarrollo y nadie lo notaría hasta conectar la API real.
+ *
+ * La eficiencia mejora poco a poco, de un 70% a un 86%: la media se queda por debajo
+ * del 85% (que es lo que dispara el modo restricción, el caso interesante) pero hay
+ * noches buenas, así que la leyenda del heatmap enseña sus dos colores.
  */
-export const mockNights: Night[] = Array.from({ length: 42 }, (_, i) => {
-  const slept = 360 + ((i * 37) % 60)
-  const inBed = slept + 90 + ((i * 13) % 40)
+export const mockNights: Night[] = Array.from({ length: MOCK_NIGHT_COUNT }, (_, i) => {
+  const progress = i / (MOCK_NIGHT_COUNT - 1)
+  const wobble = ((i * 37) % 40) - 20
+  const slept = Math.round(345 + progress * 75 + wobble)
+  const inBed = Math.round(slept / (0.7 + progress * 0.16))
   return {
-    night_of: daysAgo(i + 1),
+    night_of: daysAgo(MOCK_NIGHT_COUNT - i),
     total_sleep_minutes: slept,
     time_in_bed_minutes: inBed,
     onset_latency_minutes: 30 + ((i * 7) % 20),

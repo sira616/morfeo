@@ -39,3 +39,29 @@ describe('Página «Esta noche»', () => {
     expect(await screen.findByText(/Ventana comprimida a propósito/i)).toBeInTheDocument()
   })
 })
+
+describe('Arco de la noche y consejos', () => {
+  beforeEach(() => {
+    useAuthStore.getState().setSession({
+      accessToken: 'mock-access',
+      refreshToken: 'mock-refresh',
+      user: mockUser,
+    })
+  })
+
+  it('el arco describe la noche para quien no lo ve', async () => {
+    renderWithProviders(<TonightPage />)
+    const arco = await screen.findByRole('img', { name: /Te acuestas a las 23:35/i })
+    expect(arco).toBeInTheDocument()
+    expect(arco).toHaveAccessibleName(/tardas 30 minutos en dormirte/i)
+  })
+
+  it('los consejos enseñan su nivel de evidencia', async () => {
+    renderWithProviders(<TonightPage />)
+    expect(await screen.findByText('Cinco cosas que ayudan')).toBeInTheDocument()
+    // La decisión de producto que separa esto de una lista de tópicos. Se espera al
+    // fetch: la cabecera se pinta antes de que lleguen los consejos.
+    expect((await screen.findAllByText('Evidencia alta')).length).toBeGreaterThan(0)
+    expect(screen.getByText(/no curan el insomnio|no son un tratamiento|Hábitos, no tratamiento/i)).toBeInTheDocument()
+  })
+})

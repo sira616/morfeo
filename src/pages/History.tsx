@@ -168,7 +168,12 @@ export function HistoryPage() {
                 </td>
                 <td
                   className="p-2 text-right tabular-nums"
-                  style={{ color: night.efficiency >= 0.85 ? 'var(--mf-good)' : undefined }}
+                  // Se compara sobre el valor redondeado, el mismo que se enseña: si no,
+                  // una noche al 84,9% aparece como "85%" y sin el verde.
+                  style={{
+                    color:
+                      Math.round(night.efficiency * 100) >= 85 ? 'var(--mf-good)' : undefined,
+                  }}
                 >
                   {Math.round(night.efficiency * 100)}%
                 </td>

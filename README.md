@@ -61,7 +61,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `npm run dev:lan` | Igual, pero accesible desde el móvil en la misma wifi |
 | `npm run typecheck` | `tsc -b` |
 | `npm run lint` | oxlint |
-| `npm test` | Vitest (50 tests) |
+| `npm test` | Vitest (63 tests) |
 | `npm run test:e2e` | Playwright sobre el build real |
 | `npm run build` | Build de producción |
 
@@ -69,12 +69,33 @@ estar en `ALLOWED_ORIGINS` del backend.
 
 | Ruta | Qué hay |
 |---|---|
-| `/` | **Esta noche**: la ventana, el desglose de factores y el simulador de "¿y si mañana madrugo?" |
+| `/` | **Esta noche**: la ventana, el arco de la noche, el desglose de factores, cinco consejos y el simulador de "¿y si mañana madrugo?" |
 | `/check-in` | El check-in del día, conversando o rellenando |
-| `/historial` | Últimas 30 noches, con gráfica y eficiencia |
+| `/historial` | Historial denso: gráfica, regularidad, jet lag social, heatmap de ocho semanas y recomendado frente a real |
 | `/reloj` | Importar la exportación del reloj |
 | `/perfil` | Hora de despertar, necesidad de sueño, latencia |
 | `/empezar` | Onboarding de tres preguntas |
+
+### Dos formas del mismo shell, no una estirada
+
+En móvil, barra de navegación abajo, donde llega el pulgar. A partir de `lg`, barra
+lateral y un lienzo de hasta 1200 px repartido en dos columnas. Una columna de móvil
+centrada en un monitor de 1440 px se ve como un teléfono pegado en medio de la
+pantalla, y eso no se arregla con padding: se arregla con otro layout y con contenido
+que se merezca el ancho.
+
+El reparto de trabajo entre pantallas también es deliberado: la portada respira y dice
+una cosa; el historial es denso, porque es donde se miran patrones.
+
+### El color tiene una regla
+
+**Si se puede pulsar, indigo. Si te informa de cómo va la cosa, verde.** Los tokens
+`--mf-good*` y `--mf-chart-*` de [tokens.css](src/styles/tokens.css) existen para que
+esa regla se cumpla sola en vez de depender de que cada componente la recuerde.
+
+El verde es un menta (`#4fd6a0`) que da 9,85:1 sobre las tarjetas, así que vale también
+como texto; el lima que venía de Plátano era de bebida energética. Hay un test de
+contraste que guarda la paleta entera contra WCAG AA.
 
 ### La pantalla principal no da solo una hora
 
@@ -82,6 +103,23 @@ Da una **ventana** (±20 min), porque una hora al minuto sería precisión falsa
 debajo el desglose completo: cada factor con sus minutos y su motivo. El backend
 manda esa lista ya calculada; aquí solo se pinta. Si un día el desglose no cuadra con
 la hora, el fallo está en el motor, no en esta capa.
+
+### El arco de la noche
+
+Las franjas del arco son proporcionales al tiempo real: el trozo ámbar del principio es
+lo que tardas en dormirte, y verlo aparte del verde es lo que mete en la cabeza la idea
+que la app defiende. SVG a mano, sin librería: son tres segmentos de círculo.
+
+### Los consejos enseñan su nivel de evidencia
+
+Cinco al día, priorizando lo que hoy te viene a cuento (café tarde, eficiencia baja,
+horario irregular) y estables durante la jornada, para que se lean en vez de hojearse.
+Cada uno lleva su fuente y si la evidencia es alta, media o limitada.
+
+Esa etiqueta no es adorno. La AASM recomienda no usar la higiene del sueño como
+tratamiento único del insomnio, así que presentar "ventila la habitación" con el mismo
+peso que "reserva la cama para dormir" sería mentir por omisión. El corpus y la
+selección viven en el backend, donde tienen tests.
 
 ### El check-in tiene dos caras
 
@@ -221,6 +259,8 @@ mínimo), que no colisiona con nada.
 - Sin tests de accesibilidad automatizados (la plantilla trae `vitest-axe` y
   `@axe-core/playwright` instalados, pero todavía sin usar).
 - El desglose de factores no está traducido a gráfico; hoy es una lista.
+- El simulador solo mueve la hora de despertar; falta poder mover cafeína, siesta y
+  ejercicio para ver la hora reaccionar en vivo.
 - Sin notificación ni recordatorio a la hora de la ventana, que es la funcionalidad
   que haría que la app se use sin abrirla. Requiere despliegue con HTTPS.
 - Sin despliegue: hoy solo se usa desde la wifi de casa con el portátil encendido.

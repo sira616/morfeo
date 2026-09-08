@@ -55,35 +55,33 @@ export function SleepHeatmap({ nights }: { nights: HeatmapNight[] }) {
         Una casilla por noche, teñida por la eficiencia del sueño.
       </p>
 
-      <div className="flex gap-2 overflow-x-auto">
-        <div className="flex flex-col gap-1 pt-0.5">
+      {/* Rejilla que se estira con la tarjeta en vez de dejar media vacía: las columnas
+          reparten el ancho disponible y las casillas quedan cuadradas. */}
+      <div className="grid grid-cols-[auto_1fr] gap-2">
+        <div className="grid grid-rows-7 gap-1">
           {WEEKDAYS.map((day) => (
-            <span key={day} className="h-4 text-[10px] leading-4 opacity-50">
+            <span key={day} className="flex items-center text-[10px] opacity-50">
               {day}
             </span>
           ))}
         </div>
-        <div className="flex gap-1">
-          {columns.map((week, index) => (
-            <div key={index} className="flex flex-col gap-1">
-              {week.map((cell) =>
-                cell.future ? (
-                  <span key={cell.key} className="h-4 w-4" />
-                ) : (
-                  <span
-                    key={cell.key}
-                    className="h-4 w-4 rounded-[3px]"
-                    style={cellStyle(cell.night?.efficiency)}
-                    title={
-                      cell.night
-                        ? `${cell.key}: ${Math.round(cell.night.efficiency * 100)}% de eficiencia`
-                        : `${cell.key}: sin datos`
-                    }
-                  />
-                ),
-              )}
-            </div>
-          ))}
+        <div className="grid grid-flow-col grid-rows-7 gap-1">
+          {columns.flat().map((cell) =>
+            cell.future ? (
+              <span key={cell.key} className="aspect-square" />
+            ) : (
+              <span
+                key={cell.key}
+                className="aspect-square rounded-[3px]"
+                style={cellStyle(cell.night?.efficiency)}
+                title={
+                  cell.night
+                    ? `${cell.key}: ${Math.round(cell.night.efficiency * 100)}% de eficiencia`
+                    : `${cell.key}: sin datos`
+                }
+              />
+            ),
+          )}
         </div>
       </div>
 
