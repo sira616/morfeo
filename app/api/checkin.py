@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
-from datetime import date
+from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -15,7 +16,8 @@ from app.core.rate_limit import RateLimiter
 from app.core.security import get_current_user
 from app.models.user import User
 from app.schemas.checkin import CheckinStreamIn
-from app.schemas.sleep import CheckinIn
+from app.models.sleep import Checkin
+from app.schemas.sleep import CheckinIn, CheckinOut
 from app.services import audit_service, checkin_service, sleep_service
 
 router = APIRouter(prefix="/api/checkin", tags=["checkin"])
@@ -47,6 +49,37 @@ def put_checkin(
     checkin = sleep_service.upsert_checkin(db, user, day, fields)
     audit_service.record(db, user, "checkin", ", ".join(sorted(fields)))
     return {"day": checkin.day, "saved": sorted(fields)}
+
+
+@router.get("/recent", response_model=list[CheckinOut])
+def recent_checkins(
+    days: int = Query(default=14, ge=1, le=365),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Los últimos check-ins, de más antiguo a más reciente.
+
+    Mismo orden que `/api/sleep/nights`: dos listas que se pintan juntas y se leen al
+    revés la una de la otra son un error esperando a pasar.
+    """
+    since = date.today() - timedelta(days=days)
+    rows = db.scalars(
+        select(Checkin)
+        .where(Checkin.user_id == user.id, Checkin.day > since)
+        .order_by(Checkin.day)
+    )
+    return [
+        CheckinOut(
+            day=c.day,
+            mood=c.mood,
+            energy=c.energy,
+            nap_minutes=c.nap_minutes,
+            coffees=c.coffees,
+            alcohol_units=c.alcohol_units,
+            cannabis_days_ago=c.cannabis_days_ago,
+        )
+        for c in rows
+    ]
 
 
 @router.post("/stream", dependencies=[Depends(_stream_rate_limiter)])

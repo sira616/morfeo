@@ -15,3 +15,6 @@ venv/
 # Son datos de sueño y de estado de ánimo: fuera del repositorio.
 morfeo.db
 *.db
+
+# Lista privada de pendientes: notas de trabajo, no documentación del repo.
+PENDIENTE.md

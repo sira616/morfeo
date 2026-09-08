@@ -144,3 +144,38 @@ def test_no_se_ven_las_noches_de_otra_persona(client):
     mias = auth_headers(client)
     nights = client.get("/api/sleep/nights?days=365", headers=mias).json()
     assert nights == []
+
+
+def test_los_checkins_recientes_salen_en_orden_ascendente(client, auth):
+    """Mismo orden que /api/sleep/nights: dos listas que se pintan juntas y se leen al
+    revés la una de la otra son un error esperando a pasar."""
+    hoy = date.today()
+    for i in (3, 1, 2):
+        client.put(
+            "/api/checkin",
+            json={"day": (hoy - timedelta(days=i)).isoformat(), "mood": i, "coffees": i},
+            headers=auth,
+        )
+
+    dias = [c["day"] for c in client.get("/api/checkin/recent?days=7", headers=auth).json()]
+    assert dias == sorted(dias)
+
+
+def test_los_checkins_recientes_no_exponen_lo_escrito(client, auth):
+    """Esta ruta alimenta un resumen de la portada; las notas no pintan nada ahí."""
+    client.put(
+        "/api/checkin",
+        json={"day": date.today().isoformat(), "notes": "algo privado", "mood": 4},
+        headers=auth,
+    )
+    cuerpo = client.get("/api/checkin/recent", headers=auth).json()
+    assert cuerpo
+    assert "notes" not in cuerpo[0]
+    assert "algo privado" not in str(cuerpo)
+
+
+def test_los_checkins_recientes_son_solo_tuyos(client, auth):
+    otra = auth_headers(client)
+    client.put("/api/checkin", json={"mood": 5}, headers=otra)
+    mias = auth_headers(client)
+    assert client.get("/api/checkin/recent", headers=mias).json() == []

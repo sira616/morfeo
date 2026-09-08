@@ -122,7 +122,7 @@ lo que este despliegue evita.
 pytest -q
 ```
 
-Esperado: **133 passed**, sin red y sin claves.
+Esperado: **136 passed**, sin red y sin claves.
 
 ## Conectar con el frontend
 
@@ -160,6 +160,7 @@ entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin c
 | `POST /api/sleep/import` | Exportación de cualquier reloj (JSON o CSV) |
 | `POST /api/sleep/metrics` | Métricas del día: pasos, ejercicio, estrés |
 | `PUT /api/checkin` | Check-in por formulario |
+| `GET /api/checkin/recent` | Últimos check-ins, para el resumen de la portada |
 | `POST /api/checkin/stream` | Check-in conversacional (SSE) |
 | `GET /api/bedtime/tonight` | **La recomendación.** `?wake_target=HH:MM:SS` simula sin guardar |
 | `GET /api/insights` | Regularidad, jet lag social, racha, recomendado frente a real y heatmap |
@@ -207,6 +208,17 @@ que se rompe sola de un día para otro.
 Un aviso: si el equipo tiene adaptadores virtuales (VirtualBox, Hyper-V, WSL), mDNS
 anuncia **todas** sus IPs y el móvil puede intentar primero una que no alcanza. Si
 tarda en cargar, la IP directa lo descarta enseguida.
+
+### Reiniciar el servidor
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scriptseiniciar.ps1
+```
+
+Y no `Stop-ScheduledTask` a secas: no siempre se lleva por delante al uvicorn, el
+arranque nuevo no puede enlazar el puerto y muere en silencio. El resultado es el peor
+posible, porque el servidor responde —el viejo— y parece que el reinicio ha funcionado
+mientras sigue sirviendo el código anterior. El script mata por puerto.
 
 ### Datos de ejemplo
 

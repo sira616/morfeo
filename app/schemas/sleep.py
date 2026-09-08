@@ -126,3 +126,19 @@ class RecommendationOut(BaseModel):
 
 class FollowedIn(BaseModel):
     followed: bool
+
+
+class CheckinOut(BaseModel):
+    """Un check-in ya guardado, para pintar la racha reciente de ánimo.
+
+    Deliberadamente **sin** `notes` ni `transcript`: esta ruta alimenta un resumen de
+    la portada, y lo que alguien escribió no pinta nada ahí.
+    """
+
+    day: date
+    mood: int | None
+    energy: int | None
+    nap_minutes: int
+    coffees: int
+    alcohol_units: int
+    cannabis_days_ago: int | None
