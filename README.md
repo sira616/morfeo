@@ -4,7 +4,14 @@ Recomienda **a qué hora meterte en la cama**, no a qué hora dormirte. Cruza lo
 mide el reloj (sueño, estrés, ejercicio) con lo que solo tú sabes (ánimo, siesta,
 café, alcohol) y calcula una ventana, con la explicación de cómo ha salido.
 
-Rama `backend` del repo `morfeo`. El frontend vive en la rama `frontend`.
+Rama `backend` del repo `morfeo`. El frontend vive en la rama `frontend`, en la carpeta
+de al lado.
+
+> **No hagas `git checkout frontend` en esta carpeta.** Las dos carpetas son clones del
+> mismo repositorio, una por rama, así que cambiar de rama aquí sustituye todo el
+> backend por el frontend. No se pierde nada —está todo en la rama— pero se recupera
+> con `git checkout backend` y hay un rato de susto. Con `git worktree` el propio git
+> lo impediría; está apuntado en PENDIENTE.md.
 
 ---
 
@@ -71,7 +78,11 @@ medianoche.
 - **Regularidad**: dispersión del punto medio de sueño, llevada a una puntuación de 0 a
   100. En 61.000 adultos del UK Biobank, el quintil más regular tuvo un 30% menos de
   mortalidad por cualquier causa, y la regularidad predijo mejor que las horas dormidas.
-- **Jet lag social**: desfase entre el punto medio de diario y el de viernes y sábado.
+- **Qué acompaña a tus mejores noches**: compara las noches con cada hábito (alcohol,
+  café tarde, ejercicio…) contra las noches sin él. Sustituyó al jet lag social, que
+  era una media de población; esto habla de los datos de quien mira. Solo se enseña con
+  al menos tres noches a cada lado y veinte minutos de diferencia: por debajo es ruido,
+  y enseñarlo invita a concluir.
 - **Racha y adherencia**: noches siguiendo la recomendación. Un día sin responder no
   rompe la racha; castigar el olvido convertiría la racha en una obligación de
   registrar, que es el tipo de presión que estropea el sueño.
@@ -122,7 +133,7 @@ lo que este despliegue evita.
 pytest -q
 ```
 
-Esperado: **136 passed**, sin red y sin claves.
+Esperado: **141 passed**, sin red y sin claves.
 
 ## Conectar con el frontend
 
@@ -163,7 +174,7 @@ entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin c
 | `GET /api/checkin/recent` | Últimos check-ins, para el resumen de la portada |
 | `POST /api/checkin/stream` | Check-in conversacional (SSE) |
 | `GET /api/bedtime/tonight` | **La recomendación.** `?wake_target=HH:MM:SS` simula sin guardar |
-| `GET /api/insights` | Regularidad, jet lag social, racha, recomendado frente a real y heatmap |
+| `GET /api/insights` | Regularidad, asociaciones, racha, recomendado frente a real y heatmap |
 | `GET /api/tips/today` | Cinco consejos con su nivel de evidencia |
 | `GET /api/dev/users` · `users/{id}` | Panel de administración. Responde 404 a quien no es admin |
 | `GET /api/bedtime/history` | Recomendaciones pasadas, con `followed` |
@@ -212,7 +223,8 @@ tarda en cargar, la IP directa lo descarta enseguida.
 ### Reiniciar el servidor
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scriptseiniciar.ps1
+powershell -ExecutionPolicy Bypass -File scripts
+einiciar.ps1
 ```
 
 Y no `Stop-ScheduledTask` a secas: no siempre se lleva por delante al uvicorn, el
