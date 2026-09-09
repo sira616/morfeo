@@ -221,6 +221,65 @@ export const LIGHT_AA_PAIRS: ContrastPair[] = [
 ]
 
 /** UI / non-text graphics and large text — WCAG AA ≥ 3:1. */
+
+/**
+ * Deep night theme (`.noche`).
+ *
+ * Un tema tenue tiene un fallo propio: es fácil pasarse de tenue. Ámbar sobre negro
+ * *parece* legible mientras lo miras a oscuras y luego no lo es. Estos pares fijan el
+ * suelo por debajo del cual el tema deja de valer.
+ */
+export const NOCHE_AA_PAIRS: ContrastPair[] = [
+  {
+    id: 'noche-ink-on-canvas',
+    foreground: '#d2a468',
+    background: '#0a0705',
+    usage: 'Body text on canvas',
+  },
+  {
+    id: 'noche-ink-on-surf',
+    foreground: '#d2a468',
+    background: '#141009',
+    usage: 'Body text on cards',
+  },
+  {
+    id: 'noche-ink-on-surf-3',
+    foreground: '#d2a468',
+    background: '#241c12',
+    usage: 'Body text on the brightest surface',
+  },
+  {
+    id: 'noche-ink-dim-on-canvas',
+    foreground: '#a97f4a',
+    background: '#0a0705',
+    usage: 'Secondary text on canvas',
+  },
+  {
+    id: 'noche-ink-dim-on-surf-3',
+    foreground: '#a97f4a',
+    background: '#241c12',
+    usage: 'Secondary text on the brightest surface',
+  },
+  {
+    id: 'noche-accent-text-on-surf',
+    foreground: '#c49a60',
+    background: '#141009',
+    usage: 'Status/accent text on cards',
+  },
+  {
+    id: 'noche-danger-on-surf',
+    foreground: '#d4795f',
+    background: '#141009',
+    usage: 'Error text on cards',
+  },
+  {
+    id: 'noche-on-primary',
+    foreground: '#120c04',
+    background: '#d49542',
+    usage: 'Label inside a filled amber button',
+  },
+]
+
 export const UI_COMPONENT_PAIRS: ContrastPair[] = [
   {
     id: 'dark-indigo-on-canvas',
@@ -242,5 +301,19 @@ export const UI_COMPONENT_PAIRS: ContrastPair[] = [
     background: '#17151f',
     size: 'large',
     usage: 'Focus accent vs card surface',
+  },
+  {
+    id: 'noche-outline-on-surf',
+    foreground: '#8f6c40',
+    background: '#141009',
+    size: 'large',
+    usage: 'Borders and icons in deep night (never body text)',
+  },
+  {
+    id: 'noche-focus-border-proxy',
+    foreground: '#d49542',
+    background: '#141009',
+    size: 'large',
+    usage: 'Focus accent vs card surface in deep night',
   },
 ]

@@ -6,6 +6,12 @@ import { Button } from '@/components/atoms/Button'
 import { Field } from '@/components/atoms/Field'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import {
+  NOCHE_END_HOUR,
+  NOCHE_START_HOUR,
+  useUiStore,
+  type Theme,
+} from '@/stores/uiStore'
+import {
   changePassword,
   logout,
   startEmailVerification,
@@ -35,6 +41,7 @@ export function ProfilePage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <SleepPreferences />
+      <AppearanceCard />
       <AccountCard />
       <PasswordCard />
       <SignOutCard />
@@ -130,6 +137,81 @@ function SleepPreferences() {
  * lo dice: sin esa frase, un campo de email en una app de sueño parece obligatorio o
  * parece que se va a usar para algo más.
  */
+/**
+ * El tema, y sobre todo el automático.
+ *
+ * El modo noche solo sirve si está puesto **cuando estás en la cama**, que es justo
+ * cuando menos apetece buscar un botón. Por eso el interruptor de verdad es el
+ * automático, y el selector manual está debajo: quien lo toque está diciendo que
+ * prefiere decidirlo él, y entonces el automático se apaga solo.
+ */
+function AppearanceCard() {
+  const theme = useUiStore((s) => s.theme)
+  const setTheme = useUiStore((s) => s.setTheme)
+  const autoNoche = useUiStore((s) => s.autoNoche)
+  const setAutoNoche = useUiStore((s) => s.setAutoNoche)
+
+  const opciones: { value: Theme; label: string; hint: string }[] = [
+    { value: 'light', label: 'Claro', hint: 'De día' },
+    { value: 'dark', label: 'Oscuro', hint: 'Por defecto' },
+    { value: 'noche', label: 'Noche profunda', hint: 'Ámbar, sin blancos' },
+  ]
+
+  return (
+    <SurfaceCard className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-headline-sm font-bold">Aspecto</h2>
+        <p className="mt-1 text-body-sm opacity-70">
+          El modo noche profunda quita los blancos y los azules. No es capricho: la luz
+          azul es la que más frena la melatonina, y el tema oscuro normal sigue teniendo
+          bastante.
+        </p>
+      </div>
+
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          checked={autoNoche}
+          onChange={(e) => setAutoNoche(e.target.checked)}
+          className="mt-1 size-5 shrink-0"
+        />
+        <span>
+          <span className="font-semibold">Activarlo solo de noche</span>
+          <span className="block text-body-sm opacity-70">
+            De {String(NOCHE_START_HOUR).padStart(2, '0')}:00 a{' '}
+            {String(NOCHE_END_HOUR).padStart(2, '0')}:00. Si eliges un tema a mano, esto
+            se apaga.
+          </span>
+        </span>
+      </label>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-body-sm font-semibold">Tema</legend>
+        <div className="flex flex-wrap gap-2">
+          {opciones.map((opcion) => (
+            <button
+              key={opcion.value}
+              type="button"
+              onClick={() => setTheme(opcion.value)}
+              aria-pressed={theme === opcion.value}
+              className="min-h-touch flex-1 rounded-md px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2"
+              style={{
+                background:
+                  theme === opcion.value ? 'var(--mf-primary)' : 'var(--mf-surf-2)',
+                color: theme === opcion.value ? 'var(--mf-on-primary)' : undefined,
+                border: '1px solid var(--mf-line-strong)',
+              }}
+            >
+              <span className="block font-semibold">{opcion.label}</span>
+              <span className="block text-body-sm opacity-80">{opcion.hint}</span>
+            </button>
+          ))}
+        </div>
+      </fieldset>
+    </SurfaceCard>
+  )
+}
+
 function AccountCard() {
   const user = useAuthStore((s) => s.user)!
   const [email, setEmail] = useState(user.email ?? '')

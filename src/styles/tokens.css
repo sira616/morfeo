@@ -339,6 +339,204 @@
   --mf-node-done: var(--mf-brand-green-dim);
 }
 
+/* --- Modo noche profunda ------------------------------------------------------
+   Para cuando abres la app ya en la cama. No es "el oscuro pero más oscuro": el
+   tema oscuro normal tiene el texto en #eceaf6, que sobre el fondo da 17:1 y a las
+   doce de la noche es un flash. Aquí el texto va a 8.8:1 —de sobra para leer, muy
+   por debajo de deslumbrar— y **no queda un solo blanco ni un solo azul**.
+
+   Lo del azul no es estética. La luz de longitud de onda corta es la que más
+   suprime la melatonina, así que un tema para leer en la cama que mantuviera el
+   índigo de los botones estaría contradiciendo lo que la propia app recomienda.
+   Todo cae a la familia ámbar.
+
+   El precio de eso hay que decirlo: el resto de la app usa el color como regla
+   —índigo si se puede pulsar, verde si te informa—, y aquí no hay dos tonos que
+   distinguir sin volver a meter frío. La regla se mantiene con otra cosa: lo
+   pulsable va **relleno** de ámbar con texto oscuro encima, y lo informativo va en
+   ámbar apagado como texto o borde. Distinto papel, distinto peso, mismo tono.
+
+   Los contrastes están fijados en tests/unit/wcagContrast.test.ts (NOCHE_AA_PAIRS),
+   porque un tema tenue es justo donde es fácil pasarse de tenue sin notarlo. */
+.noche {
+  --mf-bg-0: #0a0705;
+  --mf-background: #0a0705;
+  --mf-auth-canvas: #0a0705;
+  --mf-surf-1: #141009;
+  --mf-surf-2: #1c160d;
+  --mf-surf-3: #241c12;
+  --mf-surface: #141009;
+  --mf-surface-dim: #0a0705;
+  --mf-surface-bright: #1c160d;
+  --mf-surface-container-lowest: #070504;
+  --mf-surface-container-low: #141009;
+  --mf-surface-container: #1c160d;
+  --mf-surface-container-high: #241c12;
+  --mf-surface-container-highest: #2c2318;
+  --mf-surface-variant: #241c12;
+
+  /* 8.85:1 sobre el fondo y 7.40:1 sobre la tarjeta más clara. Cómodo de leer sin
+     ser un foco. */
+  --mf-ink: #d2a468;
+  --mf-ink-dim: #a97f4a;   /* 5.57:1 — sigue siendo AA como texto normal */
+  --mf-ink-faint: #8f6c40; /* 4.20:1 — solo para bordes e iconos, no para leer */
+  --mf-on-background: #d2a468;
+  --mf-on-surface: #d2a468;
+  --mf-on-surface-variant: #a97f4a;
+  --mf-outline: #8f6c40;
+  --mf-outline-variant: rgba(210, 164, 104, 0.18);
+  --mf-inverse-surface: #d2a468;
+  --mf-inverse-on-surface: #0a0705;
+
+  --mf-line: rgba(210, 164, 104, 0.08);
+  --mf-line-strong: rgba(210, 164, 104, 0.16);
+
+  /* El índigo era el color de "esto se pulsa". Aquí lo hereda el ámbar saturado, y
+     lo que lo separa del resto es el relleno, no el tono. */
+  --mf-indigo: #d49542;
+  --mf-indigo-2: #e0a04a;
+  --mf-indigo-deep: #a86f2c;
+  --mf-teal: #c49a60;
+  --mf-teal-deep: #96733f;
+  --mf-teal-fill: #c49a60;
+  --mf-gold: #cc9e63;
+  --mf-red: #d4795f;
+  --mf-blue: #c08a55;
+
+  --mf-brand-navy: #0a0705;
+  --mf-brand-yellow: #d4a642;
+  --mf-brand-green: #c49a60;
+  --mf-brand-green-dim: #96733f;
+  --mf-accent-text: #c49a60;
+  --mf-on-brand: #120c04;
+  --mf-on-teal-chip: #120c04;
+  --mf-on-gold-chip: #120c04;
+  --mf-on-blue-chip: #120c04;
+
+  --mf-primary: var(--mf-indigo);
+  --mf-on-primary: #120c04;      /* 7.57:1 sobre el ámbar relleno */
+  --mf-primary-container: rgba(212, 149, 66, 0.18);
+  --mf-on-primary-container: #e0a04a;
+  --mf-inverse-primary: var(--mf-indigo-2);
+  --mf-secondary: var(--mf-teal);
+  --mf-on-secondary: #120c04;
+  --mf-secondary-container: rgba(196, 154, 96, 0.14);
+  --mf-on-secondary-container: #c49a60;
+  --mf-secondary-fixed: #c49a60;
+  --mf-secondary-fixed-dim: #96733f;
+  --mf-on-secondary-fixed: #120c04;
+  --mf-on-secondary-fixed-variant: #120c04;
+  --mf-tertiary: var(--mf-gold);
+  --mf-on-tertiary: #120c04;
+  --mf-tertiary-container: rgba(204, 158, 99, 0.14);
+  --mf-on-tertiary-container: #cc9e63;
+  --mf-tertiary-fixed: #cc9e63;
+  --mf-tertiary-fixed-dim: #a97f4a;
+  --mf-on-tertiary-fixed: #120c04;
+  --mf-on-tertiary-fixed-variant: #120c04;
+  --mf-primary-fixed: var(--mf-indigo-2);
+  --mf-primary-fixed-dim: var(--mf-indigo);
+  --mf-on-primary-fixed: #120c04;
+  --mf-on-primary-fixed-variant: #120c04;
+  --mf-error: var(--mf-red);
+  --mf-on-error: #120c04;
+  --mf-error-container: rgba(212, 121, 95, 0.14);
+  --mf-on-error-container: #d4795f;
+
+  /* Sombras casi planas: un degradado marcado obliga a la pupila a trabajar, y en
+     una pantalla a oscuras el relieve ya lo da el propio fondo. */
+  --mf-shadow-md: 0 10px 26px -16px rgba(0, 0, 0, 0.9);
+  --mf-shadow-glow: 0 8px 24px -16px rgba(212, 149, 66, 0.28);
+  --mf-shadow-brand: 0 12px 30px -20px rgba(196, 154, 96, 0.22);
+
+  /* Nada de brillos blancos: un `rgba(255,255,255,...)` sobre ámbar se ve gris y
+     rompe el tono cálido justo en los bordes, que es donde más se nota. */
+  --mf-sheen: rgba(210, 164, 104, 0.07);
+  --mf-sheen-strong: rgba(210, 164, 104, 0.1);
+  --mf-inset-shine: rgba(210, 164, 104, 0.14);
+  --mf-control-hover: rgba(210, 164, 104, 0.06);
+  --mf-tint-brand: rgba(196, 154, 96, 0.12);
+  --mf-tint-brand-soft: rgba(196, 154, 96, 0.04);
+  --mf-tint-brand-border: rgba(196, 154, 96, 0.28);
+  --mf-tint-teal: rgba(196, 154, 96, 0.1);
+  --mf-tint-teal-border: rgba(196, 154, 96, 0.2);
+  --mf-tint-indigo: rgba(212, 149, 66, 0.12);
+  --mf-tint-blue: rgba(192, 138, 85, 0.12);
+  --mf-tint-red: rgba(212, 121, 95, 0.12);
+  --mf-glow-brand: radial-gradient(
+    circle,
+    rgba(212, 149, 66, 0.14) 0%,
+    rgba(196, 154, 96, 0.05) 45%,
+    transparent 70%
+  );
+  --mf-glow-indigo: radial-gradient(
+    circle,
+    rgba(212, 149, 66, 0.12),
+    transparent 70%
+  );
+  --mf-session-ring: linear-gradient(
+    140deg,
+    rgba(212, 149, 66, 0.4),
+    rgba(196, 154, 96, 0.2) 55%,
+    rgba(210, 164, 104, 0.04)
+  );
+  --mf-bar-edge: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 149, 66, 0.35),
+    rgba(196, 154, 96, 0.18),
+    transparent
+  );
+  --mf-focus-ring: rgba(212, 149, 66, 0.2);
+  --mf-focus-border: rgba(212, 149, 66, 0.65);
+
+  --mf-canvas-radial: radial-gradient(
+    900px 640px at 50% -8%,
+    #14100a 0%,
+    #0e0a07 42%,
+    #0a0705 72%
+  );
+
+  --mf-bg: var(--mf-bg-0);
+  --mf-fg: var(--mf-ink);
+  --mf-muted: var(--mf-ink-dim);
+  --mf-border: var(--mf-line-strong);
+  --mf-surface-2: var(--mf-surf-2);
+  --mf-surface-3: var(--mf-surf-3);
+  --mf-accent: var(--mf-brand-green);
+  --mf-accent-soft: var(--mf-tint-brand);
+  --mf-on-accent: var(--mf-on-brand);
+  --mf-danger: var(--mf-red);
+  --mf-warning: var(--mf-gold);
+  --mf-info: var(--mf-ink-dim);
+  --mf-ring: var(--mf-indigo);
+  --mf-success: var(--mf-brand-green);
+  --mf-shadow: var(--mf-shadow-md);
+  /* Las seis pistas de color se quedan en cuatro escalones de brillo del mismo
+     ámbar. Con un solo tono disponible, seis matices distinguibles no existen:
+     fingirlos sería peor que asumir que aquí se distinguen menos cosas. */
+  --mf-hint-1: #e0a04a;
+  --mf-hint-2: #c49a60;
+  --mf-hint-3: #cc9e63;
+  --mf-hint-4: #d4a642;
+  --mf-hint-5: #c08a55;
+  --mf-hint-6: #d4795f;
+  --mf-node-locked: var(--mf-ink-faint);
+  --mf-node-available: var(--mf-ink-dim);
+  --mf-node-active: var(--mf-indigo-2);
+  --mf-node-done: var(--mf-brand-green);
+
+  --mf-good: var(--mf-brand-green);
+  --mf-good-dim: var(--mf-brand-green-dim);
+  --mf-good-tint: var(--mf-tint-brand);
+  --mf-good-border: var(--mf-tint-brand-border);
+
+  --mf-chart-sleep: #c49a60;
+  --mf-chart-in-bed: rgba(210, 164, 104, 0.16);
+  --mf-chart-awake: #d4795f;
+  --mf-chart-recommended: #d49542;
+}
+
 .dark {
   /* same as :root — dark is the default system */
 }

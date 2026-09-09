@@ -9,6 +9,7 @@ import {
 import {
   DARK_AA_PAIRS,
   LIGHT_AA_PAIRS,
+  NOCHE_AA_PAIRS,
   UI_COMPONENT_PAIRS,
 } from '@/lib/wcagPalette'
 
@@ -73,6 +74,46 @@ describe('WCAG 2.1 AA — light theme text pairs', () => {
       }
     },
   )
+})
+
+describe('WCAG 2.1 AA — deep night theme text pairs', () => {
+  it.each(NOCHE_AA_PAIRS)(
+    '$id ≥ 4.5:1 ($usage)',
+    ({ foreground, background, size = 'normal' }) => {
+      const ratio = contrastRatio(foreground, background)
+      expect(
+        meetsContrast(foreground, background, 'AA', size),
+        `ratio ${ratio.toFixed(2)} for ${foreground} on ${background}`,
+      ).toBe(true)
+      if (size === 'normal') {
+        expect(ratio).toBeGreaterThanOrEqual(4.5)
+      }
+    },
+  )
+
+  /**
+   * El techo, que en los otros temas no tiene sentido y aquí es la mitad del asunto.
+   *
+   * El modo noche existe para no deslumbrar: el texto del tema oscuro normal da 17:1
+   * sobre su fondo, y eso a las doce es un flash. Sin este tope, cualquier "se lee
+   * poco, lo subo un pelo" acaba devolviendo el tema al punto de partida sin que
+   * ningún test se queje, porque subir el contraste nunca rompe la regla de AA.
+   */
+  it('no deslumbra: el texto se queda muy por debajo del tema oscuro', () => {
+    const cuerpo = NOCHE_AA_PAIRS.find((p) => p.id === 'noche-ink-on-canvas')!
+    const ratio = contrastRatio(cuerpo.foreground, cuerpo.background)
+    expect(ratio).toBeGreaterThanOrEqual(4.5)
+    expect(ratio).toBeLessThanOrEqual(12)
+  })
+
+  it('no queda ni un color frío: todo tira a ámbar', () => {
+    for (const { id, foreground } of NOCHE_AA_PAIRS) {
+      const [r, , b] = parseHex(foreground)
+      // El azul por encima del rojo es lo que la app le pide al usuario que evite
+      // antes de dormir; el tema no puede ser el primero en saltárselo.
+      expect(b, `${id}: ${foreground} tiene más azul que rojo`).toBeLessThan(r)
+    }
+  })
 })
 
 describe('WCAG 2.1 AA — UI / large text (≥ 3:1)', () => {
