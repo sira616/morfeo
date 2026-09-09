@@ -326,8 +326,15 @@ lo que hace que se entienda: una hora suelta no dice nada, «20 min antes» sí.
 - Sin tests de accesibilidad automatizados (la plantilla trae `vitest-axe` y
   `@axe-core/playwright` instalados, pero todavía sin usar).
 - El desglose de factores no está traducido a gráfico; hoy es una lista.
-- El simulador solo mueve la hora de despertar; falta poder mover cafeína, siesta y
-  ejercicio para ver la hora reaccionar en vivo.
+- **La deuda de sueño no se enseña.** El backend ya la devuelve dentro de
+  `GET /api/bedtime/tonight`, en `sleep_debt`, con el nivel en palabras, lo que suma a
+  la hora de esta noche y el plazo para saldarla. Falta la tarjeta de la portada, y el
+  plazo tiene que ir al lado: un número de deuda creciendo, solo y de noche, es
+  ansiedad y no información.
+- **Sin pantalla del informe semanal.** `GET /api/insights/weekly` ya devuelve las
+  últimas siete noches contra las siete anteriores, con las frases escritas por el
+  motor. La ventana es móvil y termina hoy, así que la vista se puede abrir cualquier
+  día sin que haya un día en que haya que acordarse.
 - Sin notificación ni recordatorio a la hora de la ventana, que es la funcionalidad
   que haría que la app se use sin abrirla. Requiere despliegue con HTTPS.
 - Sin despliegue: hoy solo se usa desde la wifi de casa con el portátil encendido.
