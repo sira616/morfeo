@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # Topes de entrada. No son paranoia: sin ellos una sola petición puede llenar la base
 # de datos o disparar el coste de tokens del check-in.
@@ -108,6 +108,63 @@ class FactorOut(BaseModel):
     detail: str
 
 
+class SimulationIn(BaseModel):
+    """Señales sustituidas a mano para responder a «¿y si...?».
+
+    Todo es opcional y todo empieza en `None` porque aquí `None` y `0` significan
+    cosas distintas: `None` es «usa lo que haya de hoy» y `0` es «simula que no
+    hubo». Sin esa diferencia no se puede preguntar qué pasaría en un día sin café,
+    que es justo la pregunta más útil.
+
+    Nada de esto se guarda. En cuanto viene un campo puesto, la recomendación del día
+    no se congela: un histórico con noches que no ocurrieron no sirve para comprobar
+    si el motor acierta, que es para lo único que existe ese histórico.
+    """
+
+    # Rechaza parámetros que no existan. Un `?cafes=3` mal escrito no cambiaría nada
+    # y el simulador parecería roto sin decir por qué.
+    model_config = ConfigDict(extra="forbid")
+
+    wake_target: time | None = None
+    coffees: int | None = Field(default=None, ge=0, le=20)
+    last_caffeine: time | None = None
+    nap_minutes: int | None = Field(default=None, ge=0, le=300)
+    exercise_minutes: int | None = Field(default=None, ge=0, le=MAX_MINUTES)
+    exercise_intensity: Intensity | None = None
+    exercise_end: time | None = None
+
+    @property
+    def active(self) -> bool:
+        """Si hay algo simulado. Es lo que decide si la recomendación se guarda."""
+        return any(value is not None for value in self.model_dump().values())
+
+
+class SleepDebtOut(BaseModel):
+    """Déficit acumulado de las dos últimas semanas, con su plazo de recuperación.
+
+    El plazo no es adorno: un número de deuda creciendo, solo, es una fuente de
+    ansiedad justo antes de dormir, que es lo contrario de lo que busca la app. Por
+    eso `nights_to_clear` viaja pegado a `minutes` y no en otra ruta que la interfaz
+    pueda decidir no pedir.
+    """
+
+    minutes: int
+    level: Literal["ninguna", "leve", "moderada", "alta"]
+    nights_counted: int
+    nights_with_deficit: int
+    worst_night_deficit_minutes: int
+    # Lo que la recomendación de esta noche ya está sumando para pagarla. Es el mismo
+    # número que aparece en el factor "Deuda de sueño".
+    tonight_recovery_minutes: int
+    # Noches durmiendo lo que necesitas hasta que la deuda deje de contar.
+    nights_to_clear: int
+    # La misma deuda hace una semana, para saber si va subiendo o bajando. `None`
+    # mientras no haya histórico suficiente: sin él, la primera semana de uso saldría
+    # siempre "subiendo" contra un cero que nadie midió.
+    previous_minutes: int | None = None
+    delta_minutes: int | None = None
+
+
 class RecommendationOut(BaseModel):
     day: date
     wake_target: time
@@ -128,6 +185,10 @@ class RecommendationOut(BaseModel):
     factors: list[FactorOut]
     notes: list[str]
     followed: bool | None = None
+    # Solo la trae /tonight. En el histórico va a `null` porque la deuda no se
+    # congeló con la recomendación: recalcularla hoy para una noche de hace un mes
+    # daría un número que nunca se enseñó.
+    sleep_debt: SleepDebtOut | None = None
 
 
 class FollowedIn(BaseModel):
