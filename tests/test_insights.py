@@ -6,11 +6,17 @@ import pytest
 from app.domain.insights import (
     MIN_MEANINGFUL_DELTA_MINUTES,
     MIN_NIGHTS_FOR_REGULARITY,
+    WeekStats,
     adherence_rate,
     associations,
+    circular_delta,
     current_streak,
     midpoint_minutes,
     regularity,
+    week_stats,
+    weekly_highlights,
+    within_window,
+    worst_night_factors,
 )
 
 
@@ -132,3 +138,103 @@ def test_lo_que_mas_mueve_la_aguja_sale_primero():
 
 def test_sin_muestras_no_hay_asociaciones():
     assert associations([]) == []
+
+
+# --- Informe semanal --------------------------------------------------------------
+
+
+def test_el_movimiento_de_la_hora_va_por_el_camino_corto():
+    """De las 23:50 a las 00:20 hay media hora hacia delante, no veintitrés y media
+    hacia atrás. Es el mismo motivo por el que la regularidad es circular."""
+    assert circular_delta(20, 1430) == 30
+    assert circular_delta(1430, 20) == -30
+    assert circular_delta(180, 120) == 60
+
+
+def test_la_ventana_que_cruza_medianoche_sigue_siendo_una_ventana():
+    # De 23:40 a 00:20.
+    assert within_window(1435, 1420, 20) is True
+    assert within_window(10, 1420, 20) is True
+    assert within_window(120, 1420, 20) is False
+    # Y una que no cruza se comporta como un intervalo normal.
+    assert within_window(1380, 1370, 1410) is True
+    assert within_window(1360, 1370, 1410) is False
+
+
+def test_una_semana_sin_horas_medidas_tiene_media_de_sueño_pero_no_de_fase():
+    """Muchos importadores traen cuánto se durmió y no cuándo. Esas noches cuentan
+    para la media, y la fase se queda en `None` en vez de en cero."""
+    stats = week_stats([420, 400, 440], [0.9, 0.85, 0.95], [])
+    assert stats.nights == 3
+    assert stats.mean_sleep_minutes == 420
+    assert stats.mean_midpoint_minutes is None
+    assert stats.sd_midpoint_minutes is None
+
+
+def _noche(factores: set[str], sueño: int) -> tuple[set[str], int]:
+    return factores, sueño
+
+
+def test_sale_lo_que_estuvo_en_las_peores_noches_y_no_en_las_demas():
+    muestras = [
+        _noche({"cafe_tarde"}, 300),
+        _noche({"cafe_tarde"}, 310),
+        _noche(set(), 320),
+        _noche(set(), 450),
+        _noche(set(), 460),
+        _noche(set(), 470),
+        _noche(set(), 480),
+    ]
+    factores = worst_night_factors(muestras)
+    assert [f.key for f in factores] == ["cafe_tarde"]
+    assert (factores[0].nights_worst, factores[0].of_worst) == (2, 3)
+    assert (factores[0].nights_rest, factores[0].of_rest) == (0, 4)
+
+
+def test_lo_que_pasa_todas_las_noches_no_explica_las_peores():
+    muestras = [_noche({"cafe_tarde"}, 300 + i * 30) for i in range(7)]
+    assert worst_night_factors(muestras) == []
+
+
+def test_una_anecdota_en_una_sola_noche_no_sale():
+    muestras = [_noche({"alcohol"}, 300)] + [_noche(set(), 400 + i) for i in range(6)]
+    assert worst_night_factors(muestras) == []
+
+
+def test_con_media_semana_no_se_buscan_culpables():
+    muestras = [_noche({"alcohol"}, 300), _noche({"alcohol"}, 310), _noche(set(), 450)]
+    assert worst_night_factors(muestras) == []
+
+
+def _stats(sueño: int | None = 420, sd: int | None = 40, nights: int = 7) -> WeekStats:
+    return WeekStats(
+        nights=nights,
+        mean_sleep_minutes=sueño,
+        mean_efficiency=0.9,
+        mean_midpoint_minutes=200,
+        sd_midpoint_minutes=sd,
+    )
+
+
+def test_con_dos_noches_el_informe_lo_dice_en_vez_de_promediar():
+    lineas = weekly_highlights(
+        _stats(nights=2), _stats(), None, [], 0, 0, None
+    )
+    assert len(lineas) == 1
+    assert "2 noches medidas" in lineas[0]
+
+
+def test_un_cambio_pequeño_se_cuenta_como_que_no_hubo_cambio():
+    """Diez minutos de diferencia entre dos semanas son ruido, y darles titular sería
+    ruido con formato."""
+    lineas = weekly_highlights(_stats(430), _stats(420), None, [], 0, 0, None)
+    assert lineas[0] == "Dormiste prácticamente lo mismo que la semana anterior."
+
+
+def test_el_informe_dice_hacia_donde_se_movio_la_hora_y_cuanto_se_durmio():
+    lineas = weekly_highlights(_stats(460), _stats(420), 45, [], 3, 5, -90)
+    texto = " ".join(lineas)
+    assert "40 min más por noche" in texto
+    assert "retrasó 45 min" in texto
+    assert "3 de 5 noches" in texto
+    assert "bajó 1 h 30 min" in texto

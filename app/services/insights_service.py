@@ -141,3 +141,162 @@ def adherence(db: DbSession, user: User, today: date) -> dict:
         "rate": insights.adherence_rate(followed),
         "series": series,
     }
+
+
+# --- Informe de la semana ---------------------------------------------------------
+
+
+def _factors_of(checkin: Checkin, metrics: DailyMetrics | None) -> set[str]:
+    return {key for key, rule in FACTOR_RULES.items() if rule(checkin, metrics)}
+
+
+def _minutes_of(moment) -> int:
+    return moment.hour * 60 + moment.minute
+
+
+def weekly(db: DbSession, user: User, today: date, offset: int = 0) -> dict:
+    """Las últimas siete noches contra las siete anteriores.
+
+    `offset` retrocede semanas enteras: 0 son las siete noches que acaban hoy, 1 las
+    siete anteriores. La ventana es **móvil**, no la semana del calendario, y esa es
+    la decisión de producto de esta ruta: un informe que solo cuadra los domingos hay
+    que acordarse de mirarlo el domingo. Este dice algo cualquier día.
+    """
+    end = today - timedelta(days=offset * insights.WEEK_NIGHTS)
+    start = end - timedelta(days=insights.WEEK_NIGHTS - 1)
+
+    nights = sleep_service.recent_nights(db, user, insights.WEEK_NIGHTS, end)
+    earlier = sleep_service.recent_nights(
+        db, user, insights.WEEK_NIGHTS, end - timedelta(days=insights.WEEK_NIGHTS)
+    )
+
+    current = insights.week_stats(
+        [n.total_sleep_minutes for n in nights],
+        [n.efficiency for n in nights],
+        [m for _, m in _midpoints(nights)],
+    )
+    previous = insights.week_stats(
+        [n.total_sleep_minutes for n in earlier],
+        [n.efficiency for n in earlier],
+        [m for _, m in _midpoints(earlier)],
+    )
+
+    shift = None
+    if current.mean_midpoint_minutes is not None and previous.mean_midpoint_minutes is not None:
+        shift = insights.circular_delta(
+            current.mean_midpoint_minutes, previous.mean_midpoint_minutes
+        )
+
+    rows = {
+        r.day: r
+        for r in db.scalars(
+            select(BedtimeRecommendation).where(
+                BedtimeRecommendation.user_id == user.id,
+                BedtimeRecommendation.day >= start,
+                BedtimeRecommendation.day <= end,
+            )
+        )
+    }
+    checkins = {
+        c.day: c
+        for c in db.scalars(
+            select(Checkin).where(
+                Checkin.user_id == user.id, Checkin.day >= start, Checkin.day <= end
+            )
+        )
+    }
+    metrics = {
+        m.day: m
+        for m in db.scalars(
+            select(DailyMetrics).where(
+                DailyMetrics.user_id == user.id, DailyMetrics.day >= start, DailyMetrics.day <= end
+            )
+        )
+    }
+
+    midpoints = dict(_midpoints(nights))
+    detail = []
+    kept = measured = 0
+    for night in nights:
+        row = rows.get(night.night_of)
+        in_window = None
+        # Solo se puede decir si se cumplió la ventana cuando hay las dos cosas: la
+        # recomendación de ese día y la hora real a la que se metió en la cama. Sin la
+        # segunda —que muchos importadores no traen— la noche queda en blanco, no en
+        # "no cumplida".
+        if row is not None and night.bed_at is not None:
+            in_window = insights.within_window(
+                _minutes_of(night.bed_at), _minutes_of(row.window_start), _minutes_of(row.window_end)
+            )
+            measured += 1
+            kept += int(in_window)
+
+        detail.append(
+            {
+                "night_of": night.night_of,
+                "total_sleep_minutes": night.total_sleep_minutes,
+                "efficiency": round(night.efficiency, 3),
+                "midpoint_minutes": midpoints.get(night.night_of),
+                "recommended": row.bedtime if row else None,
+                "actual": night.bed_at.time() if night.bed_at else None,
+                "in_window": in_window,
+                "followed": row.followed if row else None,
+            }
+        )
+
+    samples = [
+        (_factors_of(checkins[n.night_of], metrics.get(n.night_of)), n.total_sleep_minutes)
+        for n in nights
+        if n.night_of in checkins
+    ]
+    factors = insights.worst_night_factors(samples)
+
+    debt, debt_before = sleep_service.debt_detail(db, user, end)
+    debt_delta = debt.minutes - debt_before if debt_before is not None else None
+
+    by_sleep = sorted(nights, key=lambda n: n.total_sleep_minutes)
+    answered = [r for r in rows.values() if r.followed is not None]
+
+    return {
+        "start": start,
+        "end": end,
+        "offset": offset,
+        "current": current.__dict__,
+        "previous": previous.__dict__,
+        "sleep_delta_minutes": (
+            current.mean_sleep_minutes - previous.mean_sleep_minutes
+            if current.mean_sleep_minutes is not None and previous.mean_sleep_minutes is not None
+            else None
+        ),
+        "efficiency_delta": (
+            round(current.mean_efficiency - previous.mean_efficiency, 3)
+            if current.mean_efficiency is not None and previous.mean_efficiency is not None
+            else None
+        ),
+        "midpoint_shift_minutes": shift,
+        "regularity_delta_minutes": (
+            current.sd_midpoint_minutes - previous.sd_midpoint_minutes
+            if current.sd_midpoint_minutes is not None and previous.sd_midpoint_minutes is not None
+            else None
+        ),
+        "debt_minutes": debt.minutes,
+        "debt_delta_minutes": debt_delta,
+        "nights": detail,
+        "best_night": by_sleep[-1].night_of if by_sleep else None,
+        "worst_night": by_sleep[0].night_of if by_sleep else None,
+        "window_kept": kept,
+        "window_measured": measured,
+        "followed": sum(1 for r in answered if r.followed),
+        "answered": len(answered),
+        "recommended": len(rows),
+        "worst_night_factors": [f.__dict__ for f in factors],
+        "highlights": insights.weekly_highlights(
+            current=current,
+            previous=previous,
+            midpoint_shift_minutes=shift,
+            factors=factors,
+            window_kept=kept,
+            window_measured=measured,
+            debt_delta_minutes=debt_delta,
+        ),
+    }

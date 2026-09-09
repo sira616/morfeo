@@ -5,6 +5,7 @@ from datetime import time
 import pytest
 
 from app.domain.bedtime import (
+    DEBT_RECOVERY_CAP_MINUTES,
     MAX_WAKE_IN_BED_MINUTES,
     RESTRICTION_FLOOR_MINUTES,
     SLEEP_NEED_CEILING_MINUTES,
@@ -13,6 +14,7 @@ from app.domain.bedtime import (
     build_profile,
     recommend_bedtime,
     sleep_debt,
+    sleep_debt_detail,
 )
 
 WAKE = time(7, 0)
@@ -401,3 +403,66 @@ def test_el_tiempo_en_la_cama_incluye_la_conciliacion():
     from app.domain.bedtime import _hours_between
 
     assert round(_hours_between(rec.bedtime, WAKE) * 60) == rec.time_in_bed_minutes
+
+
+# --- Deuda de sueño, la que se enseña en la portada -------------------------------
+
+
+def test_la_deuda_suma_deficit_y_no_da_credito():
+    """Cinco noches de 7 h contra una necesidad de 8 h son 300 min. La de 10 h no
+    devuelve nada: dormir de más un sábado no deja reservas para el lunes."""
+    detalle = sleep_debt_detail([420] * 5 + [600], 480)
+    assert detalle.minutes == 300
+    assert detalle.nights_counted == 6
+    assert detalle.nights_with_deficit == 5
+    assert detalle.worst_night_deficit_minutes == 60
+
+
+def test_media_hora_repartida_en_dos_semanas_no_es_deuda():
+    """Por debajo del umbral no se enseña como deuda: cabe en el error del reloj, y
+    enseñarla con la misma cara que seis horas es lo que genera ansiedad."""
+    detalle = sleep_debt_detail([470, 480, 480], 480)
+    assert detalle.minutes == 10
+    assert detalle.level == "ninguna"
+    assert detalle.nights_to_clear == 0
+
+
+def test_el_nivel_va_relativo_a_lo_que_cada_uno_necesita():
+    """Los mismos 100 min de déficit no pesan igual con una necesidad de 8 h que con
+    una de 6 h."""
+    assert sleep_debt_detail([380], 480).level == "leve"
+    assert sleep_debt_detail([260], 360).level == "moderada"
+
+
+def test_el_plazo_es_lo_que_tardan_las_noches_malas_en_salir_de_la_ventana():
+    """El plazo no promete que dormir de más devuelva horas —el motor no da crédito—,
+    promete que esto se pasa: las dos noches malas son las más antiguas, así que en dos
+    noches durmiendo lo que necesitas dejan de contar."""
+    detalle = sleep_debt_detail([300, 300] + [480] * 5, 480)
+    assert detalle.minutes == 360
+    assert detalle.nights_to_clear == 2
+
+
+def test_lo_que_recupera_esta_noche_es_el_mismo_numero_que_el_factor():
+    """La cifra que se enseña en la portada tiene que ser la que el motor usa, o la
+    explicación de por qué hoy la hora es más temprana deja de cuadrar."""
+    detalle = sleep_debt_detail([360] * 10, 480)
+    rec = recommend_bedtime(
+        WAKE,
+        SleepProfile(sleep_need_minutes=480),
+        DaySignals(sleep_debt_minutes=detalle.minutes),
+    )
+    factor = next(f for f in rec.factors if f.label == "Deuda de sueño")
+    assert detalle.tonight_recovery_minutes == factor.minutes == DEBT_RECOVERY_CAP_MINUTES
+
+
+def test_sin_noches_medidas_la_deuda_es_cero_y_no_un_error():
+    detalle = sleep_debt_detail([], 480)
+    assert (detalle.minutes, detalle.nights_counted, detalle.nights_to_clear) == (0, 0, 0)
+    assert detalle.level == "ninguna"
+
+
+def test_la_deuda_solo_mira_la_ventana_pedida():
+    """Un mes malo hace tres semanas no cuenta hoy: la ventana son catorce noches."""
+    detalle = sleep_debt_detail([0] * 10 + [480] * 14, 480)
+    assert detalle.minutes == 0

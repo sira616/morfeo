@@ -236,3 +236,90 @@ def test_las_marcas_de_tiempo_del_panel_llevan_zona(client, monkeypatch):
     assert detalle["events"], "el alta ya deja un evento"
     marca = detalle["events"][0]["at"]
     assert marca.endswith("+00:00") or marca.endswith("Z"), marca
+
+
+def test_la_deuda_viaja_con_la_recomendacion_y_lleva_su_plazo(client, auth):
+    """En la portada la deuda no puede ir sola: un número creciendo sin plazo al lado,
+    justo antes de dormir, es ansiedad y no información."""
+    hoy = date.today()
+    nights = [
+        {
+            "night_of": (hoy - timedelta(days=i)).isoformat(),
+            "total_sleep_minutes": 400,
+            "time_in_bed_minutes": 460,
+        }
+        for i in range(1, 8)
+    ]
+    client.post("/api/sleep/nights", json={"nights": nights}, headers=auth)
+
+    deuda = client.get("/api/bedtime/tonight", headers=auth).json()["sleep_debt"]
+    # Siete noches de 400 min contra 480 de necesidad: 560 min de déficit.
+    assert deuda["minutes"] == 560
+    assert deuda["level"] == "alta"
+    assert deuda["nights_with_deficit"] == 7
+    # Las siete noches malas tienen que salir de la ventana para que deje de contar.
+    assert deuda["nights_to_clear"] == 7
+    # Y es el mismo número del factor que mueve la hora de esta noche.
+    rec = client.get("/api/bedtime/tonight", headers=auth).json()
+    factor = next(f for f in rec["factors"] if f["label"] == "Deuda de sueño")
+    assert deuda["tonight_recovery_minutes"] == factor["minutes"]
+
+
+def test_el_historico_no_inventa_la_deuda_de_aquel_dia(client, auth):
+    """No se congeló con la recomendación, así que va a null. Recalcularla hoy daría
+    un número que aquel día nadie vio."""
+    client.get("/api/bedtime/tonight", headers=auth)
+    historico = client.get("/api/bedtime/history?limit=1", headers=auth).json()
+    assert historico[0]["sleep_debt"] is None
+
+
+def _semana(client, auth, hoy: date) -> None:
+    nights = [
+        {
+            "night_of": (hoy - timedelta(days=i)).isoformat(),
+            "total_sleep_minutes": 420,
+            "time_in_bed_minutes": 470,
+            "bed_at": f"{(hoy - timedelta(days=i)).isoformat()}T23:30:00",
+        }
+        for i in range(7)
+    ]
+    client.post("/api/sleep/nights", json={"nights": nights}, headers=auth)
+
+
+def test_el_informe_semanal_habla_de_las_ultimas_siete_noches_cualquier_dia(client, auth):
+    """La ventana es móvil y no la semana del calendario: si solo cuadrara los
+    domingos habría que acordarse de abrirlo el domingo."""
+    hoy = date.today()
+    _semana(client, auth, hoy)
+    client.get("/api/bedtime/tonight", headers=auth)  # congela la de hoy
+
+    informe = client.get("/api/insights/weekly", headers=auth).json()
+    assert informe["start"] == (hoy - timedelta(days=6)).isoformat()
+    assert informe["end"] == hoy.isoformat()
+    assert informe["current"]["nights"] == 7
+    assert informe["current"]["mean_sleep_minutes"] == 420
+    assert len(informe["nights"]) == 7
+    assert informe["highlights"]
+
+    # Solo hoy tiene recomendación guardada, así que solo de hoy se puede decir si se
+    # cumplió la ventana. Las demás quedan en hueco, no en "no cumplida".
+    assert informe["window_measured"] == 1
+    assert sum(1 for n in informe["nights"] if n["in_window"] is not None) == 1
+
+
+def test_sin_semana_anterior_las_comparaciones_van_a_null(client, auth):
+    _semana(client, auth, date.today())
+    informe = client.get("/api/insights/weekly", headers=auth).json()
+    assert informe["previous"]["mean_sleep_minutes"] is None
+    assert informe["sleep_delta_minutes"] is None
+    assert informe["midpoint_shift_minutes"] is None
+
+
+def test_el_offset_retrocede_semanas_enteras(client, auth):
+    hoy = date.today()
+    _semana(client, auth, hoy)
+    anterior = client.get("/api/insights/weekly?offset=1", headers=auth).json()
+    assert anterior["end"] == (hoy - timedelta(days=7)).isoformat()
+    assert anterior["current"]["nights"] == 0
+    # Y la anterior a esa tampoco: el informe no se inventa una comparación.
+    assert anterior["previous"]["nights"] == 0

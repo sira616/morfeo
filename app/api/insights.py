@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -16,6 +16,7 @@ from app.schemas.insights import (
     RegularityOut,
     TipOut,
     TipsOut,
+    WeeklyOut,
 )
 from app.services import insights_service, tips_service
 
@@ -36,6 +37,21 @@ def get_insights(db: Session = Depends(get_db), user: User = Depends(get_current
         adherence=AdherenceOut(**insights_service.adherence(db, user, today)),
         heatmap=insights_service.heatmap(db, user, today),
     )
+
+
+@router.get("/insights/weekly", response_model=WeeklyOut)
+def get_weekly(
+    offset: int = Query(default=0, ge=0, le=52),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """El informe de las últimas siete noches, disponible cualquier día.
+
+    `offset` retrocede semanas enteras. La ventana es móvil y no la semana del
+    calendario a propósito: un resumen que solo cuadra los domingos hay que
+    acordarse de abrirlo el domingo, y entonces no lo abre nadie.
+    """
+    return WeeklyOut(**insights_service.weekly(db, user, date.today(), offset))
 
 
 @router.get("/tips/today", response_model=TipsOut)

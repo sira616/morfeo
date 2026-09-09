@@ -32,6 +32,17 @@ SLEEP_NEED_CEILING_MINUTES = 600  # 10 h
 DEBT_RECOVERY_RATIO = 0.25
 DEBT_RECOVERY_CAP_MINUTES = 60
 
+# Por debajo de esta cifra la deuda deja de significar nada: media hora repartida en
+# dos semanas cabe dentro del error del propio reloj. Enseñar "23 min de deuda" con
+# la misma cara que seis horas es lo que convierte un dato en ansiedad.
+DEBT_CLEARED_MINUTES = 30
+
+# Cortes para poner la deuda en palabras, en fracción de una noche. Van relativos a la
+# necesidad de cada persona a propósito: cuatro horas de déficit no pesan igual para
+# quien necesita seis que para quien necesita nueve.
+DEBT_MILD_RATIO = 0.25
+DEBT_MODERATE_RATIO = 0.75
+
 # Se recomienda una ventana, no un instante. Un "acuéstate a las 23:37" es precisión
 # falsa: ni los datos del reloj ni la fisiología dan para ese nivel de detalle.
 WINDOW_HALF_WIDTH_MINUTES = 20
@@ -419,6 +430,76 @@ def sleep_debt(recent_sleep_minutes: list[int], sleep_need_minutes: int, window:
     nueve horas un sábado no dejan al cuerpo con reservas para el lunes.
     """
     return sum(max(0, sleep_need_minutes - m) for m in recent_sleep_minutes[-window:])
+
+
+@dataclass(frozen=True)
+class SleepDebt:
+    """La deuda con todo lo que hace falta para poder enseñarla sin asustar.
+
+    `minutes` a solas es un número que crece y no dice qué hacer con él. Por eso esta
+    clase lleva pegados el plazo (`nights_to_clear`) y lo que la recomendación de hoy
+    ya está haciendo al respecto (`tonight_recovery_minutes`).
+    """
+
+    minutes: int
+    nights_counted: int
+    nights_with_deficit: int
+    worst_night_deficit_minutes: int
+    level: str  # "ninguna" | "leve" | "moderada" | "alta"
+    # Lo que esta noche suma la recomendación para ir pagándola. Es exactamente el
+    # mismo número que aparece en el factor "Deuda de sueño".
+    tonight_recovery_minutes: int
+    # Noches durmiendo lo que necesitas hasta que la deuda deje de contar.
+    nights_to_clear: int
+
+
+def _debt_level(minutes: int, sleep_need_minutes: int) -> str:
+    if minutes <= DEBT_CLEARED_MINUTES:
+        return "ninguna"
+    if minutes < sleep_need_minutes * DEBT_MILD_RATIO:
+        return "leve"
+    if minutes < sleep_need_minutes * DEBT_MODERATE_RATIO:
+        return "moderada"
+    return "alta"
+
+
+def sleep_debt_detail(
+    recent_sleep_minutes: list[int], sleep_need_minutes: int, window: int = 14
+) -> SleepDebt:
+    """La misma deuda que calcula `sleep_debt`, con el contexto para poder enseñarla.
+
+    El plazo de recuperación sale de la propia definición de la deuda y no de una
+    fisiología inventada: como es el déficit de las últimas `window` noches, durmiendo
+    lo que necesitas se salda sola según las noches malas van saliendo de la ventana.
+    `nights_to_clear` es cuántas noches faltan para que lo que queda dentro baje del
+    umbral en que la deuda deja de contar.
+
+    Dicho de otra forma: no promete que dormir de más "devuelva" horas, porque el
+    motor tampoco da crédito por dormir de más. Promete que esto se pasa.
+    """
+    nights = recent_sleep_minutes[-window:]
+    deficits = [max(0, sleep_need_minutes - m) for m in nights]
+    minutes = sum(deficits)
+
+    recovery = min(round(minutes * DEBT_RECOVERY_RATIO), DEBT_RECOVERY_CAP_MINUTES)
+
+    # La noche más antigua es la primera en salir de la ventana, así que se van
+    # descartando por delante hasta que lo que queda ya no importa.
+    nights_to_clear = 0
+    for dropped in range(len(deficits) + 1):
+        if sum(deficits[dropped:]) <= DEBT_CLEARED_MINUTES:
+            nights_to_clear = dropped
+            break
+
+    return SleepDebt(
+        minutes=minutes,
+        nights_counted=len(nights),
+        nights_with_deficit=sum(1 for d in deficits if d > 0),
+        worst_night_deficit_minutes=max(deficits, default=0),
+        level=_debt_level(minutes, sleep_need_minutes),
+        tonight_recovery_minutes=recovery,
+        nights_to_clear=nights_to_clear,
+    )
 
 
 def build_profile(

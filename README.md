@@ -60,6 +60,16 @@ descuento es la razón de ser de la app.
 **La deuda se paga a plazos.** Dormir tres horas de más una noche desplaza el ritmo
 circadiano y empeora la siguiente. Se recupera un 25% por noche, con tope de una hora.
 
+`sleep_debt_detail` la devuelve con lo que hace falta para poder enseñarla sin que sea
+un número que asuste: el nivel en palabras, cuánto suma la recomendación de esta noche
+y, sobre todo, **el plazo**. El plazo no promete que dormir de más devuelva horas —el
+motor no da crédito por dormir de más—, promete que esto se pasa: como la deuda es el
+déficit de una ventana de catorce noches, durmiendo lo que necesitas se salda sola
+según las noches malas van saliendo de la ventana. Y la comparación con la semana
+anterior solo sale cuando la ventana de atrás está igual de llena; si no, las tres
+primeras semanas de uso dirían "subiendo" siempre, que es exactamente el número que no
+conviene enseñar de noche.
+
 **Con la eficiencia baja, la ventana se acorta.** Es contraintuitivo y deliberado. Por
 debajo del 85% de eficiencia (dormido frente a tiempo en la cama) el problema no es
 falta de oportunidad para dormir: es que la cama se está usando para estar despierto.
@@ -95,6 +105,12 @@ medianoche.
 - **Racha y adherencia**: noches siguiendo la recomendación. Un día sin responder no
   rompe la racha; castigar el olvido convertiría la racha en una obligación de
   registrar, que es el tipo de presión que estropea el sueño.
+- **Informe semanal**: las últimas siete noches contra las siete anteriores, con las
+  frases ya escritas por el motor. La ventana es **móvil y termina hoy**, no la semana
+  del calendario: un resumen que solo cuadra los domingos hay que acordarse de abrirlo
+  el domingo, y entonces no lo abre nadie. `?offset=1` retrocede una semana.
+- **Deuda de sueño**: el déficit de las últimas catorce noches, que el motor ya usaba
+  para mover la hora y ahora también se puede enseñar.
 
 Cuando faltan noches con horas reales, estas métricas devuelven `null`, nunca un cero:
 un cero se leería como "tienes un horario malísimo" cuando lo que pasa es que el
@@ -142,7 +158,7 @@ lo que este despliegue evita.
 pytest -q
 ```
 
-Esperado: **145 passed**, sin red y sin claves.
+Esperado: **180 passed**, sin red y sin claves.
 
 ## Migraciones
 
@@ -215,12 +231,42 @@ entonces sí interviene CORS: su URL tiene que estar en `ALLOWED_ORIGINS`, sin c
 | `PUT /api/checkin` | Check-in por formulario |
 | `GET /api/checkin/recent` | Últimos check-ins, para el resumen de la portada |
 | `POST /api/checkin/stream` | Check-in conversacional (SSE) |
-| `GET /api/bedtime/tonight` | **La recomendación.** `?wake_target=HH:MM:SS` simula sin guardar |
+| `GET /api/bedtime/tonight` | **La recomendación.** Con cualquier parámetro simula sin guardar (ver abajo) |
 | `GET /api/insights` | Regularidad, asociaciones, racha, recomendado frente a real y heatmap |
+| `GET /api/insights/weekly` | Informe de las últimas siete noches. `?offset=1` retrocede una semana |
 | `GET /api/tips/today` | Cinco consejos con su nivel de evidencia |
 | `GET /api/dev/users` · `users/{id}` | Panel de administración. Responde 404 a quien no es admin |
 | `GET /api/bedtime/history` | Recomendaciones pasadas, con `followed` |
 | `PATCH /api/bedtime/{día}/followed` | Marcar si se siguió |
+
+## El simulador
+
+`GET /api/bedtime/tonight` sin parámetros devuelve la recomendación del día y **la
+guarda**. Con cualquier parámetro puesto responde a un «¿y si...?» y no guarda nada:
+
+    /api/bedtime/tonight?coffees=0
+    /api/bedtime/tonight?wake_target=05:00:00&nap_minutes=0
+    /api/bedtime/tonight?exercise_intensity=hard&exercise_minutes=60&exercise_end=22:30:00
+
+Acepta `wake_target`, `coffees`, `last_caffeine`, `nap_minutes`, `exercise_minutes`,
+`exercise_intensity` y `exercise_end`. Un parámetro que no exista da 422 en vez de
+ignorarse: un simulador que se traga un `?cafes=3` mal escrito parece roto sin decir
+por qué.
+
+Lo único delicado de todo esto es la condición de guardado. Si una simulación se
+guardara, el histórico acabaría lleno de noches que nadie vivió y dejaría de servir
+para lo único que existe, que es comprobar después si el motor acertaba. Está fijado
+en `tests/test_simulador.py`.
+
+**`None` y `0` no son lo mismo**, y por eso todos los campos son opcionales en vez de
+tener un valor por defecto: omitir un campo es «usa lo de hoy», mandar `0` es «simula
+que no hubo». Sin esa diferencia no se puede preguntar qué pasaría en un día sin café,
+que es la pregunta más útil que se le hace a esto.
+
+Dos reglas viven en `sleep_service.apply_overrides` porque el motor solo no las da:
+simular cero cafés borra también la hora del último —el motor lee «hay hora pero no sé
+cuántos» como dosis media, así que dejarla puesta haría que quitar el café no cambiara
+nada—, y lo mismo con cero minutos de ejercicio, que apaga intensidad y hora de fin.
 
 ## Usarlo desde el móvil en casa
 
