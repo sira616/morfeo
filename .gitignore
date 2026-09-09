@@ -18,3 +18,8 @@ morfeo.db
 
 # Lista privada de pendientes: notas de trabajo, no documentación del repo.
 PENDIENTE.md
+
+# Copias de seguridad de la base: contienen cuentas reales y hashes.
+morfeo.db.backup-*
+*.db-shm
+*.db-wal

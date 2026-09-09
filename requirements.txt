@@ -14,6 +14,9 @@ argon2-cffi==23.1.0
 # --- Base de datos ---
 # SQLite basta para una app personal; psycopg2 solo hace falta al pasar a Postgres.
 sqlalchemy==2.0.35
+# Migraciones. `create_all` crea tablas nuevas pero no cambia las existentes, que es
+# justo donde estaba el fallo.
+alembic==1.13.3
 psycopg2-binary==2.9.10
 
 # --- LLM (entrevista del check-in y explicación de la recomendación) ---

@@ -142,7 +142,40 @@ lo que este despliegue evita.
 pytest -q
 ```
 
-Esperado: **141 passed**, sin red y sin claves.
+Esperado: **145 passed**, sin red y sin claves.
+
+## Migraciones
+
+El esquema lo lleva **Alembic**, y se aplica solo al arrancar. Antes se usaba
+`Base.metadata.create_all()`, que crea tablas nuevas pero **no toca las que ya
+existen**: añadir una columna a un modelo no la añadía a la base, y el fallo no
+aparecía hasta que una ruta devolvía 500 en caliente con todo el código correcto. Pasó
+tres veces.
+
+Cuando cambies un modelo:
+
+```bash
+venv\Scripts\python.exe -m alembic revision --autogenerate -m "qué cambia"
+```
+
+Revisa el fichero que sale —autogenerate acierta casi siempre, pero no adivina un
+renombrado: propone borrar una columna y crear otra, y eso **pierde los datos**— y
+reinicia. La migración se aplica sola.
+
+Hay un test que compara el esquema migrado con los modelos y falla si alguien cambia un
+modelo sin migración, diciendo la tabla, la columna y el comando exacto. Es el guardián
+que convierte esto en algo que no se puede olvidar.
+
+Dos detalles del montaje:
+
+- La URL sale de `settings.DATABASE_URL`, no de `alembic.ini`. Con dos sitios donde
+  configurarla se acaba migrando una base mientras la app usa otra.
+- `render_as_batch=True`, porque SQLite no sabe hacer casi ningún `ALTER TABLE`. Sin
+  eso, cualquier migración que cambie o borre una columna falla al aplicarse.
+
+Migrar en el arranque es una decisión **de este despliegue**: un solo proceso y una base
+de pocos megas. Con varias instancias arrancando a la vez habría que sacarlo a un paso
+aparte, porque dos procesos migrando en paralelo se pisan.
 
 ## Conectar con el frontend
 

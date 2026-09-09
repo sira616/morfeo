@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth, bedtime, checkin, dev, insights, me, sleep
 from app.core.config import IS_PRODUCTION, settings
-from app.core.database import Base, engine
+from app.core.migrations import upgrade_to_head
 from app.core.spa import mount_spa
 from app.models import (  # noqa: F401 — registran los modelos en Base.metadata
     AuditEvent,
@@ -22,7 +22,9 @@ from app.models import (  # noqa: F401 — registran los modelos en Base.metadat
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    # Migrar, no `create_all`: crear tablas nuevas es lo fácil, y lo que fallaba era
+    # cambiar las que ya existían. Ver app/core/migrations.py.
+    upgrade_to_head()
     yield
 
 
