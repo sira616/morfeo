@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { AlertTriangle, Info } from 'lucide-react'
 import { Button } from '@/components/atoms/Button'
@@ -7,12 +7,15 @@ import { Modal } from '@/components/atoms/Modal'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { NightArc } from '@/components/night/NightArc'
 import { SleepSummaryCard } from '@/components/night/SleepSummaryCard'
+import { Simulator } from '@/components/night/Simulator'
 import { TipsCard } from '@/components/night/TipsCard'
 import {
   clearCheckinWakeTarget,
   getTonight,
+  isSimulating,
   markFollowed,
   type Recommendation,
+  type SimulationParams,
 } from '@/api/morfeo'
 import { routes } from '@/router/paths'
 
@@ -23,7 +26,26 @@ function hhmm(value: string): string {
 function duration(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
+  // Sin el primer caso salía «0 h 20 min». No se veía hasta que el simulador empezó a
+  // enseñar diferencias de menos de una hora, que son casi todas.
+  if (h === 0) return `${m} min`
   return m === 0 ? `${h} h` : `${h} h ${m} min`
+}
+
+/**
+ * Minutos entre dos horas, con signo y por el camino corto.
+ *
+ * Sin lo del camino corto, comparar las 23:50 con las 00:10 daba 1420 min de
+ * diferencia en vez de 20: el simulador diría que te acuestas casi un día antes cada
+ * vez que la hora cruza la medianoche, que es la mitad de las noches.
+ */
+function minutesBetween(from: string, to: string): number {
+  const parse = (v: string) => {
+    const [h, m] = v.split(':').map(Number)
+    return (h ?? 0) * 60 + (m ?? 0)
+  }
+  const diff = ((parse(to) - parse(from) + 1440) % 1440 + 1440) % 1440
+  return diff > 720 ? diff - 1440 : diff
 }
 
 const CONFIDENCE_COPY: Record<Recommendation['confidence'], string> = {
@@ -50,13 +72,25 @@ function addMinutes(time: string, minutes: number): string {
 export function TonightPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
-  const [simulatedWake, setSimulatedWake] = useState<string>('')
+  const [sim, setSim] = useState<SimulationParams>({})
   const [whyOpen, setWhyOpen] = useState(false)
+  const simulando = isSimulating(sim)
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['tonight', simulatedWake],
-    queryFn: () => getTonight(simulatedWake || undefined),
+  // La real se pide siempre, incluso mientras simulas: es la que el servidor congela
+  // como recomendación del día, y es contra la que se compara la simulada. Sin ella
+  // el simulador enseñaría una hora suelta, que no dice nada.
+  const real = useQuery({ queryKey: ['tonight'], queryFn: () => getTonight() })
+  const simulada = useQuery({
+    queryKey: ['tonight', sim],
+    queryFn: () => getTonight(sim),
+    enabled: simulando,
+    // Mantener la respuesta anterior mientras llega la nueva: si no, cada ficha que
+    // tocas apaga la cifra medio segundo y el efecto de «se mueve» se pierde.
+    placeholderData: keepPreviousData,
   })
+
+  const { isLoading, isError } = real
+  const data = (simulando ? simulada.data : undefined) ?? real.data
 
   const follow = useMutation({
     mutationFn: (followed: boolean) => markFollowed(data!.day, followed),
@@ -106,7 +140,11 @@ export function TonightPage() {
             {hhmm(data.wake_target)}
           </p>
 
-          <WakeSource recommendation={data} />
+          {simulando && real.data ? (
+            <SimulationDelta real={real.data} simulada={data} />
+          ) : (
+            <WakeSource recommendation={data} />
+          )}
 
           <button
             type="button"
@@ -134,32 +172,9 @@ export function TonightPage() {
           </SurfaceCard>
         ) : null}
 
-        <SurfaceCard>
-          <label htmlFor="wake" className="text-body-sm font-semibold">
-            ¿Y si mañana te levantas a otra hora?
-          </label>
-          <p className="mb-2 text-body-sm opacity-70">
-            Solo simula: no cambia tu perfil ni se guarda.
-          </p>
-          <div className="flex gap-2">
-            <input
-              id="wake"
-              type="time"
-              value={simulatedWake ? simulatedWake.slice(0, 5) : ''}
-              onChange={(e) => setSimulatedWake(e.target.value ? `${e.target.value}:00` : '')}
-              className="min-h-touch flex-1 rounded-md px-3"
-              style={{
-                background: 'var(--mf-surf-2)',
-                border: '1px solid var(--mf-line-strong)',
-              }}
-            />
-            <Button variant="ghost" onClick={() => setSimulatedWake('')} disabled={!simulatedWake}>
-              Quitar
-            </Button>
-          </div>
-        </SurfaceCard>
+        <Simulator sim={sim} onChange={setSim} activo={simulando} />
 
-        {!simulatedWake ? (
+        {!simulando ? (
           <SurfaceCard>
             <p className="mb-2 text-body-sm font-semibold">¿Seguiste la recomendación de ayer?</p>
             <div className="flex gap-2">
@@ -197,6 +212,39 @@ export function TonightPage() {
 
       <WhyModal open={whyOpen} onClose={() => setWhyOpen(false)} recommendation={data} />
     </div>
+  )
+}
+
+/**
+ * Lo que convierte el simulador en algo que se entiende: no la hora simulada, sino
+ * cuánto se ha movido respecto a la de verdad. Una hora suelta no dice nada; «40 min
+ * antes» sí.
+ */
+function SimulationDelta({
+  real,
+  simulada,
+}: {
+  real: Recommendation
+  simulada: Recommendation
+}) {
+  const diferencia = minutesBetween(real.bedtime, simulada.bedtime)
+  const absoluta = Math.abs(diferencia)
+
+  return (
+    <p
+      className="mt-2 rounded-md px-3 py-2 text-body-sm"
+      style={{ background: 'var(--mf-tint-indigo)' }}
+    >
+      <strong>Simulación.</strong>{' '}
+      {absoluta === 0 ? (
+        <>Con esos cambios la hora no se movería.</>
+      ) : (
+        <>
+          {duration(absoluta)} {diferencia > 0 ? 'más tarde' : 'antes'} que tu hora real,
+          que son las {hhmm(real.bedtime)}.
+        </>
+      )}
+    </p>
   )
 }
 

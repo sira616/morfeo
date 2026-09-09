@@ -35,6 +35,13 @@ function unauthorized(request: Request) {
   return !request.headers.get('Authorization')
 }
 
+/** Suma minutos a un "HH:MM:SS" cruzando medianoche. Solo para los mocks. */
+function shiftTime(value: string, minutes: number): string {
+  const [h, m, s = '00'] = value.split(':')
+  const total = ((Number(h) * 60 + Number(m) + minutes) % 1440 + 1440) % 1440
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}:${s}`
+}
+
 export const handlers = [
   http.post('/api/auth/register', async ({ request }) => {
     const body = (await request.json()) as { username: string; email?: string }
@@ -117,12 +124,25 @@ export const handlers = [
     if (unauthorized(request)) {
       return HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
     }
-    const wake = new URL(request.url).searchParams.get('wake_target')
-    return HttpResponse.json(
-      wake
-        ? { ...recommendation, wake_target: wake, wake_target_source: 'simulacion' }
-        : recommendation,
-    )
+    const params = new URL(request.url).searchParams
+    if ([...params.keys()].length === 0) return HttpResponse.json(recommendation)
+
+    // El mock no reimplementa el motor: solo mueve la hora lo justo para que se vea
+    // que la simulación cambia algo. Las reglas de verdad se prueban en el backend.
+    const wake = params.get('wake_target')
+    const cafes = params.get('coffees')
+    const siesta = params.get('nap_minutes')
+    const desplazamiento =
+      (cafes !== null ? (Number(cafes) - 4) * 5 : 0) +
+      (siesta !== null ? Math.round(Number(siesta) / 2) : 0)
+
+    return HttpResponse.json({
+      ...recommendation,
+      ...(wake ? { wake_target: wake, wake_target_source: 'simulacion' } : {}),
+      bedtime: shiftTime(recommendation.bedtime, desplazamiento),
+      window_start: shiftTime(recommendation.window_start, desplazamiento),
+      window_end: shiftTime(recommendation.window_end, desplazamiento),
+    })
   }),
 
   http.get('/api/bedtime/history', ({ request }) =>

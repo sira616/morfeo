@@ -151,3 +151,71 @@ describe('Coordinación de la hora de despertar', () => {
     expect(screen.getByRole('button', { name: /Usar la de mi perfil/i })).toBeInTheDocument()
   })
 })
+
+describe('Simulador', () => {
+  beforeEach(login)
+
+  it('«Hoy» y «Ninguno» son cosas distintas, y solo la segunda se manda', async () => {
+    const user = userEvent.setup()
+    const urls: string[] = []
+    server.use(
+      http.get('/api/bedtime/tonight', ({ request }) => {
+        urls.push(request.url)
+        return HttpResponse.json(mockRecommendation)
+      }),
+    )
+
+    renderWithProviders(<TonightPage />)
+    await screen.findByText('23:15 – 23:55')
+
+    // El estado inicial no manda nada: pedir la del día es lo que la guarda, y una
+    // simulación no debe guardarse nunca.
+    expect(urls.every((url) => !url.includes('coffees'))).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: 'Ninguno' }))
+    await screen.findByText(/Simulación/i)
+
+    // «Ninguno» viaja como coffees=0, no como campo ausente: sin esa diferencia no se
+    // puede preguntar qué pasaría en un día sin café.
+    expect(urls.some((url) => url.includes('coffees=0'))).toBe(true)
+  })
+
+  it('dice cuánto se mueve la hora, no solo cuál sería', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<TonightPage />)
+    await screen.findByText('23:15 – 23:55')
+
+    await user.click(screen.getByRole('button', { name: '1 h' }))
+
+    // El mock adelanta media hora por una siesta de 60 min. Lo que importa del texto
+    // es que compare con la hora real, no que enseñe una hora suelta.
+    const aviso = (await screen.findByText(/Simulación/i)).closest('p')!
+    expect(aviso).toHaveTextContent('30 min más tarde')
+    expect(aviso).toHaveTextContent('23:35')
+  })
+
+  it('mientras simulas no se puede marcar la recomendación como seguida', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<TonightPage />)
+    await screen.findByText('23:15 – 23:55')
+    expect(screen.getByRole('button', { name: 'La seguí' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Ninguno' }))
+
+    // Marcar «la seguí» sobre una hora inventada ensuciaría justo el dato con el que
+    // se comprueba si el motor acierta.
+    expect(screen.queryByRole('button', { name: 'La seguí' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Volver a mi día real/i }))
+    expect(await screen.findByRole('button', { name: 'La seguí' })).toBeInTheDocument()
+  })
+
+  it('la hora del café solo se pregunta cuando hay café', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<TonightPage />)
+    await screen.findByText('23:15 – 23:55')
+
+    expect(screen.queryByLabelText(/El último, a las/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '2' }))
+    expect(await screen.findByLabelText(/El último, a las/i)).toBeInTheDocument()
+  })
+})

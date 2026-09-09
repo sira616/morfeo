@@ -61,8 +61,33 @@ export type CheckinFields = {
 }
 
 /** `wakeTarget` simula otra hora de despertar sin tocar el perfil ni guardar nada. */
-export function getTonight(wakeTarget?: string) {
-  const query = wakeTarget ? `?wake_target=${encodeURIComponent(wakeTarget)}` : ''
+/**
+ * Señales que se pueden sustituir para preguntar «¿y si...?».
+ *
+ * `null` y `0` no son lo mismo y por eso los campos se omiten en vez de mandarse
+ * vacíos: omitir un campo es «usa lo de hoy», mandar `0` es «simula que no hubo».
+ * Confundirlos hacía imposible simular un día sin café.
+ */
+export type SimulationParams = {
+  wake_target?: string
+  coffees?: number
+  last_caffeine?: string
+  nap_minutes?: number
+  exercise_minutes?: number
+  exercise_intensity?: 'none' | 'light' | 'moderate' | 'hard'
+  exercise_end?: string
+}
+
+export function isSimulating(sim: SimulationParams): boolean {
+  return Object.values(sim).some((value) => value !== undefined)
+}
+
+export function getTonight(sim: SimulationParams = {}) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(sim)) {
+    if (value !== undefined) params.set(key, String(value))
+  }
+  const query = params.size > 0 ? `?${params}` : ''
   return apiClient<Recommendation>(`/api/bedtime/tonight${query}`)
 }
 

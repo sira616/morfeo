@@ -61,7 +61,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `npm run dev:lan` | Igual, pero accesible desde el móvil en la misma wifi |
 | `npm run typecheck` | `tsc -b` |
 | `npm run lint` | oxlint |
-| `npm test` | Vitest (89 tests) |
+| `npm test` | Vitest (109 tests) |
 | `npm run test:e2e` | Playwright sobre el build real |
 | `npm run build` | Build de producción |
 
@@ -74,7 +74,7 @@ estar en `ALLOWED_ORIGINS` del backend.
 | `/check-in` | El check-in del día, conversando o rellenando |
 | `/historial` | Historial denso: gráfica, regularidad, jet lag social, heatmap de ocho semanas y recomendado frente a real |
 | `/reloj` | Apuntar la noche y, debajo, conectar o importar del reloj |
-| `/perfil` | Horarios, cuenta, email opcional y cambio de contraseña |
+| `/perfil` | Horarios, aspecto, cuenta, email opcional y cambio de contraseña |
 | `/dev` | Panel de administración. Solo visible para cuentas de `ADMIN_USERNAMES` |
 | `/empezar` | Onboarding de tres preguntas |
 
@@ -292,6 +292,33 @@ compañía, y Tailwind resuelve `max-w-sm` contra la escala de espaciado antes q
 contra la de anchos: `max-w-sm` valía 12px y cualquier tarjeta centrada salía como un
 hilo de píxeles. El único alias que queda es `--spacing-touch` (44px, objetivo táctil
 mínimo), que no colisiona con nada.
+
+**El modo noche profunda no es «el oscuro pero más oscuro».** El tema oscuro normal
+pone el texto a 17:1 sobre su fondo, que a las doce de la noche es un flash; en `.noche`
+va a 8.8:1, de sobra para leer y lejos de deslumbrar. No queda ni un blanco ni un azul,
+y esto último no es estética: la luz de longitud de onda corta es la que más frena la
+melatonina, así que un tema para leer en la cama que mantuviera el índigo de los botones
+estaría contradiciendo lo que la propia app recomienda.
+
+El precio hay que decirlo. El resto de la interfaz usa el color como regla —índigo si
+se puede pulsar, verde si te informa— y con un solo tono disponible esa regla no cabe.
+Se mantiene con otra cosa: lo pulsable va **relleno** de ámbar con texto oscuro encima,
+lo informativo va en ámbar apagado como texto o borde. Los contrastes están fijados en
+[`tests/unit/wcagContrast.test.ts`](tests/unit/wcagContrast.test.ts), **con techo además
+de suelo**: sin el techo, cualquier «se lee poco, lo subo un pelo» devolvería el tema al
+punto de partida sin que ningún test se quejara, porque subir el contraste nunca rompe
+AA.
+
+Se enciende solo de 22:00 a 6:00 (`autoNoche`, en `uiStore`). Elegir tema a mano lo
+apaga: si no, la app te lo cambiaría por debajo al minuto siguiente y parecería que no
+hace caso al botón.
+
+**El simulador distingue «Hoy» de «0».** Los controles son fichas y no cajas de número
+por eso mismo: una ficha puede decir «Hoy» y otra «Ninguno», y se ve cuál está puesta
+sin leer nada. En cuanto hay algo simulado desaparece el botón de «la seguí» —marcar
+como seguida una hora inventada ensuciaría justo el dato con el que se comprueba si el
+motor acierta— y la cifra se acompaña de cuánto se ha movido respecto a la real, que es
+lo que hace que se entienda: una hora suelta no dice nada, «20 min antes» sí.
 
 ## Pendiente
 
