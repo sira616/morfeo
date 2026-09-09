@@ -7,11 +7,20 @@ café, alcohol) y calcula una ventana, con la explicación de cómo ha salido.
 Rama `backend` del repo `morfeo`. El frontend vive en la rama `frontend`, en la carpeta
 de al lado.
 
-> **No hagas `git checkout frontend` en esta carpeta.** Las dos carpetas son clones del
-> mismo repositorio, una por rama, así que cambiar de rama aquí sustituye todo el
-> backend por el frontend. No se pierde nada —está todo en la rama— pero se recupera
-> con `git checkout backend` y hay un rato de susto. Con `git worktree` el propio git
-> lo impediría; está apuntado en PENDIENTE.md.
+> **Este clon solo conoce la rama `backend`.** Las dos carpetas son clones del mismo
+> repositorio, una por rama, y cambiar de rama aquí sustituía todo el backend por el
+> frontend: pasó dos veces, la segunda desde GitHub Desktop. No se perdía nada, pero el
+> susto y los 5000 ficheros «sin commitear» del `venv` no compensan.
+>
+> Ahora `git checkout frontend` falla con *pathspec did not match*, porque el refspec
+> del remoto está acotado:
+>
+> ```bash
+> git config remote.origin.fetch "+refs/heads/backend:refs/remotes/origin/backend"
+> ```
+>
+> Para trabajar en el frontend, la carpeta de al lado. Si algún día hace falta la otra
+> rama aquí, se revierte poniendo `+refs/heads/*:refs/remotes/origin/*`.
 
 ---
 
