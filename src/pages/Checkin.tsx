@@ -74,7 +74,10 @@ export function CheckinPage() {
   const [tab, setTab] = useState<'form' | 'chat'>('form')
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    // Centrada y con tope aunque sobre pantalla: es un formulario y una conversación,
+    // y las dos cosas se leen peor cuanto más larga es la línea. Se ensancha de 672 a
+    // 768 px, que es donde el formulario respira sin que el chat se vuelva una tira.
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <div className="flex gap-2" role="tablist" aria-label="Modo de check-in">
         <Button
           role="tab"

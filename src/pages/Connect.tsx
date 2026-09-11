@@ -42,7 +42,12 @@ export function ConnectPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    // Una sola columna, aunque haya sitio: el orden es lo que hace funcionar esta
+    // pantalla —primero el formulario, que sin reloj es la única forma de que el motor
+    // conozca tu latencia y tu eficiencia, y después lo opcional— y repartirla en dos
+    // columnas pondría lo prescindible al lado de lo imprescindible. Lo que sí se hace
+    // es dejar de estrangularla a 672 px.
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <NightLogForm />
 
       <div className="border-t pt-2" style={{ borderColor: 'var(--mf-line)' }}>

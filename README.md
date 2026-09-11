@@ -80,11 +80,30 @@ estar en `ALLOWED_ORIGINS` del backend.
 
 ### Dos formas del mismo shell, no una estirada
 
-En móvil, barra de navegación abajo, donde llega el pulgar. A partir de `lg`, barra
-lateral y un lienzo de hasta 1200 px repartido en dos columnas. Una columna de móvil
-centrada en un monitor de 1440 px se ve como un teléfono pegado en medio de la
-pantalla, y eso no se arregla con padding: se arregla con otro layout y con contenido
-que se merezca el ancho.
+Cabecera arriba en todos los tamaños, y en móvil además la barra de abajo, donde llega
+el pulgar. El lienzo llega a 1760 px y las páginas se reparten en columnas según lo que
+tengan que enseñar.
+
+Hubo barra lateral en escritorio y se quitó, porque conseguía lo contrario de lo que
+buscaba: se comía 240 px fijos y empujaba el contenido a una franja en medio, así que
+un monitor grande enseñaba una app de móvil centrada entre dos márgenes enormes. Con la
+navegación arriba, el ancho entero es del contenido.
+
+Que el ancho exista no significa estirarlo todo. Cada pantalla decide:
+
+- **Esta noche** e **Historial** van a dos columnas y ocupan lo que haya: tienen datos
+  de sobra para llenarlo.
+- **Perfil** son cinco tarjetas independientes, así que se reparten en dos columnas y
+  en tres a partir de `2xl`. Se ensancha en número de columnas y no en anchura de
+  campo: un formulario de 1700 px de ancho no se rellena mejor.
+- **Reloj** y **Check-in** se quedan en una columna centrada. En Reloj el orden es lo
+  que hace funcionar la pantalla —primero el formulario, que sin reloj es la única
+  forma de que el motor conozca tu latencia, y después lo opcional—, y dos columnas
+  pondrían lo prescindible al lado de lo imprescindible. En Check-in, porque una
+  conversación con líneas de un metro no se lee.
+
+El tope de 1760 px existe por lo mismo: sin ninguno, en un ultrapanorámico una línea de
+texto cruzaría la pantalla entera y dejaría de leerse.
 
 El reparto de trabajo entre pantallas también es deliberado: la portada respira y dice
 una cosa; el historial es denso, porque es donde se miran patrones.

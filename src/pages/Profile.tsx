@@ -39,13 +39,18 @@ export function ProfilePage() {
   if (!user) return null
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    // Cinco tarjetas independientes entre sí, así que en escritorio van en dos
+    // columnas: en una sola, a 1440 px, el perfil era una tira estrecha en medio de la
+    // pantalla y había que bajar hasta el final teniendo sitio de sobra al lado.
+    // `items-start` para que cada tarjeta mida lo suyo en vez de estirarse a la altura
+    // de la más alta de su fila.
+    <div className="mx-auto grid max-w-[1600px] items-start gap-6 lg:grid-cols-2 2xl:grid-cols-3">
       <SleepPreferences />
       <AppearanceCard />
       <AccountCard />
       <PasswordCard />
       <SignOutCard />
-      <p className="px-2 text-body-sm opacity-60">
+      <p className="px-2 text-body-sm opacity-60 lg:col-span-2 2xl:col-span-3">
         Morfeo es una herramienta de hábitos, no un dispositivo médico. Si el insomnio
         persiste, lo valora un profesional del sueño.
       </p>

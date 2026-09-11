@@ -7,45 +7,49 @@ import { routes } from '@/router/paths'
 import { useAuthStore } from '@/stores/authStore'
 
 /**
- * Dos formas distintas del mismo shell, no una estirada.
+ * Una cabecera arriba en todos los tamaños, y en el móvil además la barra inferior.
  *
- * En móvil, barra de navegación abajo, donde llega el pulgar. A partir de `lg`, barra
- * lateral y un lienzo ancho: una columna de móvil centrada en un monitor de 1440 px se
- * ve como un teléfono pegado en medio de la pantalla, y eso no se arregla con padding.
+ * Antes, en escritorio, había barra lateral. Se quitó porque conseguía lo contrario de
+ * lo que buscaba: se comía 240 px fijos y empujaba el contenido a una franja estrecha
+ * en medio, con lo que un monitor grande enseñaba una app de móvil centrada entre dos
+ * márgenes enormes. Con la navegación arriba, el ancho entero es para el contenido.
+ *
+ * La barra inferior del móvil se queda: ahí el problema es el contrario —el pulgar no
+ * llega arriba— y la app se usa de noche y con una mano.
  */
 export function AppShell() {
   const user = useAuthStore((s) => s.user)
-  // La barra lateral tiene sitio para el panel; la inferior del móvil, no: cinco
+  // La cabecera tiene ancho de sobra para el panel; la inferior del móvil no: cinco
   // iconos ya llenan el ancho del pulgar.
-  const sidebarNav = user?.isAdmin ? [...NAV, ...ADMIN_NAV] : NAV
+  const headerNav = user?.isAdmin ? [...NAV, ...ADMIN_NAV] : NAV
 
   return (
     <div
-      className="flex h-dvh flex-col overflow-hidden text-ink lg:flex-row"
+      className="flex h-dvh flex-col overflow-hidden text-ink"
       style={{ background: 'var(--mf-canvas-radial)' }}
     >
-      {/* --- Barra lateral, solo en escritorio --- */}
-      <aside
-        className="safe-top hidden shrink-0 flex-col gap-1 border-r px-3 py-4 lg:flex lg:w-60"
+      <header
+        className="safe-top safe-sides flex shrink-0 items-center gap-4 border-b px-4 py-2 lg:px-8"
         style={{ background: 'var(--mf-surf-1)', borderColor: 'var(--mf-line)' }}
       >
         <NavLink
           to={routes.tonight}
-          className="mb-4 flex items-center gap-2 rounded-md px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo"
+          className="flex shrink-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo"
         >
-          <Moon aria-hidden size={22} />
+          <Moon aria-hidden size={20} />
           <span className="text-headline-md font-bold">Morfeo</span>
         </NavLink>
 
-        <nav className="flex flex-col gap-1" aria-label="Secciones">
-          {sidebarNav.map(({ to, label, icon: Icon }) => (
+        {/* Solo en escritorio: en el móvil esto mismo vive abajo, al alcance del pulgar. */}
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Secciones">
+          {headerNav.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               end
               className={({ isActive }) =>
                 cn(
-                  'flex min-h-touch items-center gap-3 rounded-lg px-3 text-body-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo',
+                  'flex min-h-touch items-center gap-2 rounded-lg px-3 text-body-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo',
                   isActive ? 'font-bold' : 'opacity-70 hover:opacity-100',
                 )
               }
@@ -59,37 +63,25 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className="mt-auto flex items-center justify-between gap-2 px-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {user ? (
-            <span className="truncate text-body-sm opacity-60">{user.displayName}</span>
+            <span className="max-w-40 truncate text-body-sm opacity-70">
+              {user.displayName}
+            </span>
           ) : null}
-          <ThemeToggle />
-        </div>
-      </aside>
-
-      {/* --- Cabecera, solo en móvil --- */}
-      <header
-        className="safe-top safe-sides flex shrink-0 items-center justify-between gap-4 border-b px-4 py-2 lg:hidden"
-        style={{ background: 'var(--mf-surf-1)', borderColor: 'var(--mf-line)' }}
-      >
-        <NavLink
-          to={routes.tonight}
-          className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo"
-        >
-          <Moon aria-hidden size={20} />
-          <span className="text-headline-md font-bold">Morfeo</span>
-        </NavLink>
-        <div className="flex items-center gap-2">
-          {user ? <span className="text-sm opacity-70">{user.displayName}</span> : null}
           <ThemeToggle />
         </div>
       </header>
 
-      <main className="safe-scroll-bottom mx-auto w-full max-w-6xl min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-4 lg:px-8 lg:py-8">
+      {/* El tope es alto, pero existe: sin ninguno, en un ultrapanorámico una línea de
+          texto cruzaría la pantalla entera y dejaría de leerse. 1760 px dan sitio a
+          tres columnas de tarjetas holgadas, que es donde se acaba lo que hay que
+          enseñar. */}
+      <main className="safe-scroll-bottom mx-auto min-h-0 w-full max-w-[1760px] flex-1 overflow-x-hidden overflow-y-auto px-4 pt-4 lg:px-8 lg:py-8">
         <Outlet />
       </main>
 
-      {/* --- Barra inferior, solo en móvil: la app se usa de noche y con una mano --- */}
+      {/* --- Barra inferior, solo en móvil --- */}
       <nav
         className="safe-bottom safe-sides fixed inset-x-0 bottom-0 z-50 flex justify-around border-t px-2 py-1 lg:hidden"
         style={{ background: 'var(--mf-surf-1)', borderColor: 'var(--mf-line)' }}

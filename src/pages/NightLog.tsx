@@ -15,7 +15,9 @@ export function NightLogPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
+    // Una sola tarea y un solo formulario: centrado y con tope, que es lo que ayuda a
+    // rellenarlo de una sentada. Solo se le quita el estrangulamiento a 672 px.
+    <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <Link to={routes.tonight} className="flex items-center gap-2 text-body-sm underline">
         <ArrowLeft aria-hidden size={16} />
         Volver
