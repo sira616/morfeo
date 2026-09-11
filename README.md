@@ -144,6 +144,27 @@ Las franjas del arco son proporcionales al tiempo real: el trozo ámbar del prin
 lo que tardas en dormirte, y verlo aparte del verde es lo que mete en la cabeza la idea
 que la app defiende. SVG a mano, sin librería: son tres segmentos de círculo.
 
+### La deuda nunca se enseña sin su plazo
+
+La tarjeta de deuda ([`SleepDebtCard`](src/components/night/SleepDebtCard.tsx)) tiene una
+regla que ordena todo lo demás: `nights_to_clear` va en la frase siguiente a los
+minutos, y no hay ningún estado que enseñe uno sin el otro. Un número de deuda
+creciendo, solo y de noche, es ansiedad y no información, y esta pantalla se mira justo
+antes de dormir.
+
+De ahí salen las otras dos decisiones. **La cifra grande no lleva color**: veintiséis
+horas en rojo a las once de la noche no dicen nada que la palabra «alta» no diga ya, y
+el rojo se lee como una alarma que no se puede atender hasta mañana, así que el color
+vive en el nivel, que es una palabra pequeña al lado. Y **cero noches no es cero
+deuda**: una cuenta recién creada devuelve `minutes: 0` con `nights_counted: 0`, y
+pintarlo como «vas al día» sería felicitar por un dato que nadie ha medido; es la misma
+regla con la que el backend devuelve `null` en vez de cero en el resto de métricas.
+
+Va en la columna de la noche, debajo de la ventana, porque es parte de por qué hoy la
+hora sale más temprana que ayer. En el móvil, que es una sola columna, la otra posición
+la dejaba por debajo del simulador entero: fuera de la portada justo en el dispositivo
+desde el que se mira.
+
 ### Los consejos enseñan su nivel de evidencia
 
 Cinco al día, priorizando lo que hoy te viene a cuento (café tarde, eficiencia baja,
@@ -326,11 +347,6 @@ lo que hace que se entienda: una hora suelta no dice nada, «20 min antes» sí.
 - Sin tests de accesibilidad automatizados (la plantilla trae `vitest-axe` y
   `@axe-core/playwright` instalados, pero todavía sin usar).
 - El desglose de factores no está traducido a gráfico; hoy es una lista.
-- **La deuda de sueño no se enseña.** El backend ya la devuelve dentro de
-  `GET /api/bedtime/tonight`, en `sleep_debt`, con el nivel en palabras, lo que suma a
-  la hora de esta noche y el plazo para saldarla. Falta la tarjeta de la portada, y el
-  plazo tiene que ir al lado: un número de deuda creciendo, solo y de noche, es
-  ansiedad y no información.
 - **Sin pantalla del informe semanal.** `GET /api/insights/weekly` ya devuelve las
   últimas siete noches contra las siete anteriores, con las frases escritas por el
   motor. La ventana es móvil y termina hoy, así que la vista se puede abrir cualquier

@@ -85,6 +85,21 @@ export const mockRecommendation: Recommendation = {
     'Tu eficiencia de sueño es del 78% (dormido frente a tiempo en la cama). Por debajo del 85% lo indicado es acortar la ventana, no alargarla: pasar horas despierta en la cama entrena al cerebro a no dormir en ella.',
   ],
   followed: null,
+  // Los 840 min del factor de arriba, para que el desglose y la tarjeta cuadren: son
+  // el mismo número contado dos veces y verlos distintos en la misma pantalla haría
+  // dudar de los dos. Bajando respecto a la semana pasada, que es el caso que ejercita
+  // la tendencia sin que haga falta tocar el mock.
+  sleep_debt: {
+    minutes: 840,
+    level: 'moderada',
+    nights_counted: 14,
+    nights_with_deficit: 9,
+    worst_night_deficit_minutes: 160,
+    tonight_recovery_minutes: 60,
+    nights_to_clear: 8,
+    previous_minutes: 915,
+    delta_minutes: -75,
+  },
 }
 
 const mockAdherence: AdherenceNight[] = Array.from({ length: 14 }, (_, i) => {

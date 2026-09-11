@@ -145,10 +145,13 @@ export const handlers = [
     })
   }),
 
+  // `sleep_debt: null` como en el backend real: la deuda no se congeló con cada
+  // recomendación, así que el histórico no la trae. Dejar aquí la de hoy haría que la
+  // interfaz pareciera funcionar contra los mocks y se quedara vacía contra la API.
   http.get('/api/bedtime/history', ({ request }) =>
     unauthorized(request)
       ? HttpResponse.json({ detail: 'No autenticado' }, { status: 401 })
-      : HttpResponse.json([recommendation]),
+      : HttpResponse.json([{ ...recommendation, sleep_debt: null }]),
   ),
 
   http.patch('/api/bedtime/:day/followed', async ({ request }) => {

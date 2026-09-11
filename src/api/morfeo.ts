@@ -6,6 +6,35 @@ export type Factor = {
   detail: string
 }
 
+/**
+ * El déficit acumulado de las últimas catorce noches.
+ *
+ * `nights_to_clear` viaja aquí dentro y no en otra ruta a propósito: una deuda
+ * creciendo, sola y de noche, es ansiedad y no información. El plazo es lo que la
+ * convierte en algo que se pasa, así que la interfaz no puede enseñar uno sin el otro.
+ */
+export type SleepDebt = {
+  minutes: number
+  level: 'ninguna' | 'leve' | 'moderada' | 'alta'
+  /**
+   * Noches con horas reales dentro de la ventana. **Cero significa «no lo sé»**, no
+   * «no tienes deuda»: una cuenta recién creada devuelve `minutes: 0` con
+   * `nights_counted: 0`, y leerlo como ausencia de deuda sería inventarse un dato.
+   */
+  nights_counted: number
+  nights_with_deficit: number
+  worst_night_deficit_minutes: number
+  /**
+   * Lo que la recomendación de esta noche ya está sumando para pagarla. Es el mismo
+   * número que el factor «Deuda de sueño» del desglose.
+   */
+  tonight_recovery_minutes: number
+  /** Noches durmiendo lo que necesitas hasta que la deuda deje de contar. */
+  nights_to_clear: number
+  previous_minutes: number | null
+  delta_minutes: number | null
+}
+
 export type Recommendation = {
   day: string
   wake_target: string
@@ -25,6 +54,12 @@ export type Recommendation = {
   factors: Factor[]
   notes: string[]
   followed: boolean | null
+  /**
+   * Solo la trae `/tonight`. En el histórico llega a `null` porque la deuda no se
+   * congeló con la recomendación, y recalcularla hoy para una noche de hace un mes
+   * daría un número que nunca se enseñó.
+   */
+  sleep_debt: SleepDebt | null
 }
 
 export type Night = {

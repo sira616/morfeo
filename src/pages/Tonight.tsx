@@ -6,6 +6,7 @@ import { Button } from '@/components/atoms/Button'
 import { Modal } from '@/components/atoms/Modal'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { NightArc } from '@/components/night/NightArc'
+import { SleepDebtCard } from '@/components/night/SleepDebtCard'
 import { SleepSummaryCard } from '@/components/night/SleepSummaryCard'
 import { Simulator } from '@/components/night/Simulator'
 import { TipsCard } from '@/components/night/TipsCard'
@@ -171,6 +172,16 @@ export function TonightPage() {
             </p>
           </SurfaceCard>
         ) : null}
+
+        {/* La deuda va en esta columna, y no en la de al lado, porque es parte de por
+            qué hoy la hora sale más temprana que ayer: separarla dejaba la portada
+            enseñando la hora sin lo que la explica. Y en el móvil, que es una sola
+            columna, la otra posición la dejaba por debajo del simulador entero, o sea
+            fuera de la portada justo en el dispositivo desde el que se mira.
+
+            El número no cambia al simular —la deuda es la de hoy y la simulación no la
+            toca—, así que no hace falta esconderla en ese modo. */}
+        <SleepDebtCard debt={data.sleep_debt} />
 
         <Simulator sim={sim} onChange={setSim} activo={simulando} />
 
