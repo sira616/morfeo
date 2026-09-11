@@ -46,6 +46,13 @@ class Settings(BaseSettings):
     # lo que se quiere en desarrollo, donde el frontend lo sirve Vite).
     FRONTEND_DIST: str = ""
 
+    # Nombre con el que anunciarse por mDNS, para poder entrar desde el móvil como
+    # http://morfeo.local:8000 sin depender de la IP. Vacío = no se anuncia nada, que
+    # es lo que se quiere en desarrollo y en los tests: un responder por sesión de
+    # pytest sería ruido en la red de quien lo ejecute. Lo pone scripts\morfeo.ps1.
+    MDNS_NAME: str = ""
+    MDNS_PORT: int = 8000
+
     ALLOWED_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",

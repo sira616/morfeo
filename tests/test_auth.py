@@ -80,11 +80,31 @@ def test_se_entra_con_el_usuario(client):
     assert resp.status_code == 200
 
 
-def test_se_entra_tambien_con_el_email_si_lo_hay(client):
+def test_se_entra_tambien_con_el_email_una_vez_verificado(client):
     name, email = _name(), f"{uuid.uuid4().hex[:10]}@example.com"
-    register(client, name, email=email)
+    body = register(client, name, email=email)
+    headers = {"Authorization": f"Bearer {body['access_token']}"}
+
+    code = _last_code(body["user"]["id"])
+    assert client.post(
+        "/api/auth/email/verify", json={"code": code}, headers=headers
+    ).status_code == 204
+
     resp = client.post("/api/auth/login", json={"login": email, "password": PASSWORD})
     assert resp.status_code == 200
+
+
+def test_un_email_sin_verificar_no_sirve_para_entrar(client):
+    """Mientras no llegue el código, esa dirección es texto que alguien ha escrito en
+    un formulario y no una identidad. La cuenta sigue funcionando por su usuario."""
+    name, email = _name(), f"{uuid.uuid4().hex[:10]}@example.com"
+    register(client, name, email=email)
+
+    por_email = client.post("/api/auth/login", json={"login": email, "password": PASSWORD})
+    assert por_email.status_code == 401
+
+    por_usuario = client.post("/api/auth/login", json={"login": name, "password": PASSWORD})
+    assert por_usuario.status_code == 200
 
 
 def test_usuario_inexistente_y_contrasena_mala_dan_el_mismo_mensaje(client):
@@ -96,6 +116,40 @@ def test_usuario_inexistente_y_contrasena_mala_dan_el_mismo_mensaje(client):
     assert mala.status_code == inexistente.status_code == 401
     # Distinguirlos convertiría el formulario en un buscador de cuentas.
     assert mala.json()["detail"] == inexistente.json()["detail"]
+
+
+def test_las_dos_ramas_del_login_gastan_el_mismo_argon2(client, monkeypatch):
+    """El mensaje único no sirve de nada si el cronómetro separa las dos ramas.
+
+    Verificar un Argon2 son decenas de milisegundos y no verificar nada es gratis, así
+    que sin el señuelo la diferencia se mide desde fuera sin esfuerzo y vuelve a haber
+    un buscador de cuentas. Se cuentan las verificaciones en vez de cronometrar porque
+    un test de tiempos falla solo el día que la máquina va cargada.
+    """
+    from app.core import passwords
+
+    verificaciones = []
+    original = passwords.verify
+
+    def contando(password: str, password_hash: str) -> bool:
+        verificaciones.append(password_hash)
+        return original(password, password_hash)
+
+    monkeypatch.setattr(passwords, "verify", contando)
+
+    name = _name()
+    register(client, name)
+    verificaciones.clear()
+
+    client.post("/api/auth/login", json={"login": name, "password": "OtraCosa123456"})
+    con_cuenta = len(verificaciones)
+    verificaciones.clear()
+
+    client.post("/api/auth/login", json={"login": _name(), "password": "OtraCosa123456"})
+    sin_cuenta = len(verificaciones)
+
+    assert con_cuenta == 1
+    assert sin_cuenta == 1
 
 
 # --- Tokens ---------------------------------------------------------------------

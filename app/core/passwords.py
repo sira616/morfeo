@@ -56,6 +56,36 @@ def verify(password: str, password_hash: str) -> bool:
         return False
 
 
+def verify_dummy(password: str) -> None:
+    """Verifica contra un hash señuelo, para que fallar cueste lo mismo que acertar.
+
+    Sin esto, entrar con un usuario que no existe responde en un milisegundo y entrar
+    con uno que sí existe tarda lo que tarda Argon2, unas decenas. El mensaje de error
+    es el mismo, pero el cronómetro los distingue igual de bien, y el formulario vuelve
+    a ser un buscador de cuentas: justo lo que el mensaje único quería evitar.
+
+    Se llama en la rama de "usuario no encontrado" y no devuelve nada, porque su
+    resultado no interesa: lo que interesa es el tiempo que gasta.
+    """
+    verify(password, _dummy_hash())
+
+
+def _dummy_hash() -> str:
+    """El hash señuelo, calculado la primera vez que hace falta.
+
+    Perezoso y no al importar el módulo: derivar un Argon2 cuesta decenas de
+    milisegundos y no hay razón para pagarlos en cada arranque, ni en cada test que
+    toque este módulo sin llegar a iniciar sesión.
+    """
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = _hasher.hash("senuelo-que-nunca-es-la-contrasena-de-nadie")
+    return _DUMMY_HASH
+
+
+_DUMMY_HASH: str | None = None
+
+
 def needs_rehash(password_hash: str) -> bool:
     """True cuando el hash se creó con parámetros más flojos que los de ahora.
 

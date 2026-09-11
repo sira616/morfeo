@@ -4,7 +4,10 @@ Escribe directamente en la base de datos y no por la API, a propósito: sesenta 
 seguidas por HTTP chocan con el rate limiting, que está ahí por buenos motivos y no
 debería relajarse para poblar una demo.
 
-    venv\\Scripts\\python.exe scripts/sembrar_demo.py tu@email.com [dias]
+    venv\\Scripts\\python.exe scripts/sembrar_demo.py syreta [dias]
+
+El argumento es el **nombre de usuario**, no el email: la identidad de una cuenta de
+Morfeo es el usuario, y `seed()` busca por ahí.
 
 Las noches malas acompañan al alcohol y al café tarde, así que las asociaciones del
 historial tienen algo real que encontrar en vez de ruido.

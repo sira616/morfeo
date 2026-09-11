@@ -11,6 +11,7 @@ completar sin acceso al correo, que es justo lo que se quiere impedir.
 from __future__ import annotations
 
 import smtplib
+import ssl
 from email.message import EmailMessage
 
 from app.core.config import settings
@@ -35,7 +36,11 @@ def send_verification_code(email: str, code: str) -> bool:
 
     try:
         with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as smtp:
-            smtp.starttls()
+            # El contexto explícito no es decorativo: `starttls()` sin argumentos usa
+            # `ssl._create_stdlib_context()`, que **no comprueba ni la cadena del
+            # certificado ni el nombre del servidor**. Con eso, cualquiera en medio se
+            # queda con SMTP_USER y SMTP_PASSWORD, que suelen ser las de un correo real.
+            smtp.starttls(context=ssl.create_default_context())
             if settings.SMTP_USER:
                 smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             smtp.send_message(message)

@@ -13,6 +13,9 @@ os.environ["ANTHROPIC_API_KEY"] = ""
 os.environ["JWT_SECRET"] = "secreto-solo-para-tests-con-longitud-de-sobra"
 os.environ["ADMIN_USERNAMES"] = "[]"
 os.environ["SMTP_HOST"] = ""
+# Sin anuncio mDNS en los tests: si la variable estuviera puesta en el entorno de quien
+# los ejecuta, cada sesión de pytest registraría un nombre en la red de verdad.
+os.environ["MDNS_NAME"] = ""
 # El fixture "client" es scope=session y varios módulos comparten /register y /login:
 # un límite bajo aquí haría que un test le robara cupo a otro. El rate limiting en sí
 # se prueba de forma aislada.

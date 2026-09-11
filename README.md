@@ -158,7 +158,7 @@ lo que este despliegue evita.
 pytest -q
 ```
 
-Esperado: **180 passed**, sin red y sin claves.
+Esperado: **188 passed**, sin red y sin claves.
 
 ## Migraciones
 
@@ -287,32 +287,51 @@ sobrevive a un reinicio. Tarea de usuario y no servicio de Windows: un servicio
 necesitaría permisos de administrador y correría sin tu perfil, que es más de lo que
 hace falta para una app doméstica.
 
-Falta una cosa que sí necesita administrador, y es la que más despista si se olvida:
+Falta lo único que necesita administrador, y es lo que más despista si se olvida:
 
 ```powershell
-New-NetFirewallRule -DisplayName 'Morfeo' -Direction Inbound -Action Allow `
-  -Protocol TCP -LocalPort 8000 -Profile Private
+powershell -ExecutionPolicy Bypass -File scripts\abrir-en-la-wifi.ps1
 ```
 
-Sin esa regla el móvil no conecta y la página simplemente no carga, sin ningún mensaje
-que lo explique.
+Hace tres cosas, y las tres hacen falta:
+
+- **Marca la wifi como red Privada.** En Pública, Windows bloquea de entrada casi todo
+  y cualquier regla con `-Profile Private` no llega a aplicarse nunca. Es el fallo que
+  deja la regla del firewall puesta y el móvil sin conectar igualmente.
+- **Abre el 8000/TCP**, por donde entra la app.
+- **Abre el 5353/UDP**, por donde el móvil pregunta quién es `morfeo.local`. Sin esto
+  la app responde por IP pero el nombre no resuelve, y parece un problema del servidor.
 
 ### La dirección
 
-`http://syreta.local:8000` es la buena: Windows responde a mDNS con el nombre del
-equipo y el iPhone lo resuelve por Bonjour, así que sigue funcionando aunque el router
-cambie la IP. La IP directa (`http://192.168.1.19:8000`) funciona también, pero es la
-que se rompe sola de un día para otro.
+`http://morfeo.local:8000`, desde el móvil y desde aquí.
 
-Un aviso: si el equipo tiene adaptadores virtuales (VirtualBox, Hyper-V, WSL), mDNS
-anuncia **todas** sus IPs y el móvil puede intentar primero una que no alcanza. Si
-tarda en cargar, la IP directa lo descarta enseguida.
+Ese nombre no sale del fichero `hosts`. `hosts` solo lo lee el ordenador que lo tiene,
+y lo que hay que resolver es el nombre **en el iPhone**. En una red doméstica sin DNS
+propio eso solo lo hace mDNS: el móvil pregunta a la red entera y alguien contesta.
+Contesta la propia app ([`app/core/mdns.py`](app/core/mdns.py)), que se anuncia al
+arrancar cuando `MDNS_NAME` está puesto —lo pone `scripts\morfeo.ps1`— y retira el
+anuncio al parar, para no dejar el nombre en la caché de los móviles apuntando a un
+servidor que ya no responde.
+
+Va dentro del proceso de la app y no en un script aparte por lo mismo que el frontend
+se sirve desde aquí: un solo proceso que arrancar y que matar. Y si el anuncio falla,
+la app arranca igual: se pierde el nombre, no el servidor.
+
+Windows anuncia por su cuenta el nombre del equipo (`$env:COMPUTERNAME` + `.local`),
+que también sirve, pero no sabe anunciar alias; renombrar el ordenador entero para que
+la app tenga el nombre bonito era desproporcionado.
+
+La IP directa funciona siempre y es lo que descarta un problema de nombres en diez
+segundos, pero es la que se rompe sola de un día para otro. Un aviso relacionado: si el
+equipo tiene adaptadores virtuales (VirtualBox, Hyper-V, WSL), se anuncia solo la IP de
+la interfaz por la que este equipo sale a la red, justamente para que el móvil no
+pruebe primero una dirección que no alcanza.
 
 ### Reiniciar el servidor
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts
-einiciar.ps1
+powershell -ExecutionPolicy Bypass -File scripts\reiniciar.ps1
 ```
 
 Y no `Stop-ScheduledTask` a secas: no siempre se lleva por delante al uvicorn, el
@@ -323,7 +342,7 @@ mientras sigue sirviendo el código anterior. El script mata por puerto.
 ### Datos de ejemplo
 
 ```bash
-venv\Scripts\python.exe scripts/sembrar_demo.py tu@email.com
+venv\Scripts\python.exe scripts/sembrar_demo.py syreta 60
 ```
 
 Escribe en la base de datos y no por la API a propósito: sesenta noches seguidas por
@@ -338,6 +357,12 @@ entrar en tu propia app de sueño no aporta nada.
 El email es opcional y sirve para una sola cosa: recuperar la contraseña. Mientras no
 se verifique, la cuenta funciona igual. Una cuenta sin email nace verificada, porque no
 tiene nada que verificar y arrastrar un aviso que no se puede quitar sería absurdo.
+
+Lo que **no** funciona sin verificar es entrar con el email. Un email sin confirmar es
+una dirección que alguien ha escrito en un formulario, no una identidad: mientras no
+llegue el código, no hay ninguna prueba de que sea suya. Y la recuperación de
+contraseña se construirá sobre ese mismo `find_by_login`, así que la regla tiene que
+estar puesta antes, no después.
 
 - **Contraseñas** con Argon2id, no bcrypt: es lo que recomienda OWASP y no trunca en
   silencio a 72 bytes. Política de 12 caracteres con mayúscula, minúscula y número;
@@ -402,22 +427,41 @@ de salud.
 
 - Rate limiting por IP y ruta en todo lo que emite credenciales, cuesta dinero o
   escribe filas.
-- Fail-fast de configuración: no arranca con Supabase mal configurado, con `*` en
-  `ALLOWED_ORIGINS`, ni con `LOCAL_DEV_AUTH` en producción.
-- `/docs` fuera de producción.
+- Fail-fast de configuración: no arranca sin `JWT_SECRET`, con uno de menos de 32
+  caracteres, ni con `*` en `ALLOWED_ORIGINS`.
+- `/docs` fuera de producción, y `scripts\morfeo.ps1` fuerza `ENVIRONMENT=production`
+  porque es el arranque que escucha en la wifi entera: ahí `/openapi.json` sería el
+  mapa completo de la API servido sin autenticación a quien pase por la red.
+- **Cabeceras de seguridad** en cada respuesta, errores incluidos
+  ([`app/core/headers.py`](app/core/headers.py)). La que importa es la CSP con
+  `script-src 'self'` y `connect-src 'self'`: el frontend guarda el refresh token
+  —treinta días de sesión— en `localStorage`, así que lo que de verdad lo protege es
+  que ningún script inyectado llegue a ejecutarse, y que si lo hiciera no tuviera a
+  dónde mandar nada. `style-src` sí lleva `'unsafe-inline'`, porque la interfaz usa
+  `style={{…}}` de React por todas partes.
 - Longitudes máximas y rangos en cada esquema de entrada.
 - Toda consulta filtra por `user_id`; una fila ajena responde 404, no 403.
 - Lo que devuelve el LLM pasa por el mismo esquema Pydantic que el formulario: un
   modelo que aluciné `nap_minutes: 900` se queda fuera.
+- Entrar con un usuario que no existe gasta el mismo Argon2 que entrar con uno que sí:
+  el mensaje único no sirve de nada si el cronómetro separa las dos ramas.
+- El STARTTLS del envío de correo va con `ssl.create_default_context()`. Sin contexto
+  explícito, `smtplib` no comprueba ni la cadena del certificado ni el nombre del
+  servidor, y las credenciales SMTP son las de un correo real.
 
 ### Lo que no está cubierto
 
+- **Todo viaja en claro.** No hay TLS: contraseñas, refresh tokens y datos de sueño
+  van por HTTP a la wifi de casa. Es lo más gordo que queda, y arreglarlo es el mismo
+  trabajo que hace falta para las notificaciones, que también piden HTTPS.
 - **El rate limiting vive en memoria de un proceso.** Con varios workers cada uno
   lleva su cuenta. Correcto para un despliegue de un proceso; al escalar, a Redis.
-- **Sin CI.** Los 43 tests no los ejecuta nadie automáticamente todavía.
-- **Sin cifrado en reposo** más allá del que dé el motor de base de datos.
-- **Sin migraciones.** `create_all` al arrancar; un cambio de columna en una tabla
-  existente hay que aplicarlo a mano.
+  Además no libera nunca las claves: acumula una entrada por (ruta, IP).
+- **Sin CI.** Los 188 tests no los ejecuta nadie automáticamente todavía.
+- **Sin cifrado en reposo** más allá del que dé el motor de base de datos. La `.db`
+  con los hashes y el histórico está en claro en el disco.
+- **Sin tope de tamaño de cuerpo** a nivel de servidor: el límite de 2 MB de
+  `ImportIn` se aplica cuando la petición ya está en memoria.
 - **Sin borrado de cuenta ni exportación de datos propios**, que en datos de salud
   debería estar.
 
