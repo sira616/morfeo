@@ -42,18 +42,26 @@ export function ConnectPage() {
   }
 
   return (
-    // Una sola columna, aunque haya sitio: el orden es lo que hace funcionar esta
-    // pantalla —primero el formulario, que sin reloj es la única forma de que el motor
-    // conozca tu latencia y tu eficiencia, y después lo opcional— y repartirla en dos
-    // columnas pondría lo prescindible al lado de lo imprescindible. Lo que sí se hace
-    // es dejar de estrangularla a 672 px.
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
-      <NightLogForm />
+    // Dos columnas en escritorio, y el orden se mantiene en la lectura de izquierda a
+    // derecha: a la izquierda lo imprescindible —apuntar la noche a mano, que sin reloj
+    // es la única forma de que el motor conozca tu latencia y tu eficiencia—, a la
+    // derecha lo opcional del reloj. En móvil se apila, con lo imprescindible primero.
+    // Antes era una sola columna estrecha que en un monitor se veía como una app de
+    // móvil pegada en medio.
+    <div className="mx-auto grid w-full max-w-6xl items-start gap-6 lg:grid-cols-2">
+      <div className="flex flex-col gap-4">
+        <NightLogForm />
+        <p className="px-2 text-body-sm opacity-60">
+          Esto es lo único que hace falta a diario. Si conectas un reloj (columna de al
+          lado), los mismos datos llegan solos cada mañana y puedes olvidarte.
+        </p>
+      </div>
 
-      <div className="border-t pt-2" style={{ borderColor: 'var(--mf-line)' }}>
+      <div className="flex flex-col gap-6">
+      <div>
         <h2 className="text-headline-sm font-bold">¿Tienes un reloj?</h2>
         <p className="text-body-sm opacity-70">
-          Si lo conectas, lo de arriba deja de hacer falta: los mismos datos llegan
+          Si lo conectas, lo de al lado deja de hacer falta: los mismos datos llegan
           solos cada mañana.
         </p>
       </div>
@@ -159,6 +167,7 @@ export function ConnectPage() {
           </li>
         </ul>
       </SurfaceCard>
+      </div>
     </div>
   )
 }

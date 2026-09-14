@@ -22,6 +22,8 @@ export type AuthUser = {
   chronotype: 'alondra' | 'intermedio' | 'buho'
   timezone: string
   poorEfficiencyThreshold: number
+  /** Año de nacimiento, no la edad: no caduca cada cumpleaños. Null = no dado. */
+  birthYear: number | null
 }
 
 type AuthState = {

@@ -133,6 +133,8 @@ export type ProfilePatch = {
   avatar_color?: string
   chronotype?: 'alondra' | 'intermedio' | 'buho'
   poor_efficiency_threshold?: number
+  /** null lo borra, como los demás campos vaciables. */
+  birth_year?: number | null
 }
 
 export async function updateProfile(patch: ProfilePatch) {

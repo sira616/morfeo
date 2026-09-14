@@ -15,6 +15,25 @@ const MOODS = [
   { value: 5, label: 'Genial' },
 ]
 
+const ENERGY = [
+  { value: 1, label: 'Agotada' },
+  { value: 2, label: 'Floja' },
+  { value: 3, label: 'Normal' },
+  { value: 4, label: 'Activa' },
+  { value: 5, label: 'A tope' },
+]
+
+// El estrés percibido no es decorativo: el motor lo usa como respaldo cuando el reloj
+// no mide estrés (lo convierte de 1-5 a su escala 0-100). Capturarlo aquí es lo que
+// hace que sirva sin reloj.
+const STRESS = [
+  { value: 1, label: 'En calma' },
+  { value: 2, label: 'Tranquila' },
+  { value: 3, label: 'Normal' },
+  { value: 4, label: 'Tensa' },
+  { value: 5, label: 'Al límite' },
+]
+
 const INTENSITIES: { value: Intensity; label: string }[] = [
   { value: 'none', label: 'Nada' },
   { value: 'light', label: 'Suave' },
@@ -56,9 +75,39 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="border-t pt-4" style={{ borderColor: 'var(--mf-line)' }}>
-      <legend className="px-2 text-body-sm font-bold opacity-70">{title}</legend>
-      <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+    <SurfaceCard className="flex break-inside-avoid flex-col gap-4">
+      <h3 className="text-body-sm font-bold opacity-70">{title}</h3>
+      {children}
+    </SurfaceCard>
+  )
+}
+
+/** Una fila de botones 1-5. Ánimo, energía y estrés comparten forma. */
+function ScaleRow({
+  legend,
+  options,
+  value,
+  onChange,
+}: {
+  legend: string
+  options: { value: number; label: string }[]
+  value: number | undefined
+  onChange: (value: number) => void
+}) {
+  return (
+    <fieldset>
+      <legend className="mb-2 text-body-sm font-semibold">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <Button
+            key={option.value}
+            variant={value === option.value ? 'primary' : 'ghost'}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
     </fieldset>
   )
 }
@@ -74,10 +123,10 @@ export function CheckinPage() {
   const [tab, setTab] = useState<'form' | 'chat'>('form')
 
   return (
-    // Centrada y con tope aunque sobre pantalla: es un formulario y una conversación,
-    // y las dos cosas se leen peor cuanto más larga es la línea. Se ensancha de 672 a
-    // 768 px, que es donde el formulario respira sin que el chat se vuelva una tira.
-    <div className="mx-auto flex max-w-3xl flex-col gap-6">
+    // El formulario teje sus secciones en varias columnas y aprovecha el escritorio;
+    // el chat, en cambio, se lee peor cuanto más ancha es la línea, así que ese se
+    // mantiene estrecho. Por eso el tope va por pestaña y no en este contenedor.
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex gap-2" role="tablist" aria-label="Modo de check-in">
         <Button
           role="tab"
@@ -97,7 +146,7 @@ export function CheckinPage() {
         </Button>
       </div>
 
-      {tab === 'form' ? <CheckinForm /> : <CheckinChat />}
+      {tab === 'form' ? <CheckinForm /> : <div className="mx-auto w-full max-w-3xl"><CheckinChat /></div>}
     </div>
   )
 }
@@ -128,22 +177,20 @@ function CheckinForm() {
   })
 
   return (
-    <SurfaceCard className="flex flex-col gap-5">
-      <fieldset>
-        <legend className="mb-2 text-body-sm font-semibold">¿Qué tal el ánimo hoy?</legend>
-        <div className="flex flex-wrap gap-2">
-          {MOODS.map((mood) => (
-            <Button
-              key={mood.value}
-              variant={fields.mood === mood.value ? 'primary' : 'ghost'}
-              onClick={() => set('mood', mood.value)}
-            >
-              {mood.label}
-            </Button>
-          ))}
+    <div className="flex flex-col gap-5">
+      <SurfaceCard className="flex flex-col gap-4">
+        <h3 className="text-body-sm font-bold opacity-70">Cómo te sientes</h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <ScaleRow legend="Ánimo" options={MOODS} value={fields.mood} onChange={(v) => set('mood', v)} />
+          <ScaleRow legend="Energía" options={ENERGY} value={fields.energy} onChange={(v) => set('energy', v)} />
+          <ScaleRow legend="Estrés" options={STRESS} value={fields.perceived_stress} onChange={(v) => set('perceived_stress', v)} />
         </div>
-      </fieldset>
+      </SurfaceCard>
 
+      {/* Las secciones se tejen en columnas: en escritorio llenan el ancho en vez de
+          apilarse en una tira estrecha. `break-inside-avoid` (en Section) evita que una
+          tarjeta se parta entre dos columnas. */}
+      <div className="gap-5 lg:columns-2 xl:columns-3 [&>*]:mb-5">
       <Section title="Cafeína">
         <Field
           label="Cafés (o equivalentes)"
@@ -295,20 +342,24 @@ function CheckinForm() {
         </Field>
       </Section>
 
-      <Button fullWidth onClick={() => save.mutate()} disabled={save.isPending}>
-        {save.isPending ? 'Guardando…' : 'Guardar check-in'}
-      </Button>
-      {save.isSuccess ? (
-        <p role="status" className="text-body-sm" style={{ color: 'var(--mf-good)' }}>
-          Guardado. Vuelve a «Esta noche» para ver la hora actualizada.
-        </p>
-      ) : null}
-      {save.isError ? (
-        <p role="alert" className="text-body-sm text-error">
-          No se pudo guardar. Inténtalo otra vez.
-        </p>
-      ) : null}
-    </SurfaceCard>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Button fullWidth onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? 'Guardando…' : 'Guardar check-in'}
+        </Button>
+        {save.isSuccess ? (
+          <p role="status" className="text-body-sm" style={{ color: 'var(--mf-good)' }}>
+            Guardado. Vuelve a «Esta noche» para ver la hora actualizada.
+          </p>
+        ) : null}
+        {save.isError ? (
+          <p role="alert" className="text-body-sm text-error">
+            No se pudo guardar. Inténtalo otra vez.
+          </p>
+        ) : null}
+      </div>
+    </div>
   )
 }
 

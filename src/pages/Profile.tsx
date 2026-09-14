@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { BadgeCheck, ShieldAlert } from 'lucide-react'
@@ -40,24 +40,60 @@ export function ProfilePage() {
   if (!user) return null
 
   return (
-    // Siete tarjetas independientes entre sí, así que en escritorio van en varias
-    // columnas: en una sola, a 1440 px, el perfil era una tira estrecha en medio de la
-    // pantalla y había que bajar hasta el final teniendo sitio de sobra al lado.
-    // `items-start` para que cada tarjeta mida lo suyo en vez de estirarse a la altura
-    // de la más alta de su fila.
-    <div className="mx-auto grid max-w-[1600px] items-start gap-6 lg:grid-cols-2 2xl:grid-cols-3">
-      <IdentityCard />
-      <AboutYouCard />
-      <SleepPreferences />
-      <AppearanceCard />
-      <AccountCard />
-      <PasswordCard />
-      <SignOutCard />
-      <p className="px-2 text-body-sm opacity-60 lg:col-span-2 2xl:col-span-3">
+    // Agrupado por categorías en vez de una rejilla plana de tarjetas sueltas: así se
+    // sabe de un vistazo qué hay dónde —quién eres, tu sueño, el aspecto, la cuenta— en
+    // lugar de tener que leer cada tarjeta para ubicarla. Dentro de cada categoría las
+    // tarjetas se reparten en columnas para llenar el ancho del escritorio.
+    <div className="mx-auto flex max-w-[1600px] flex-col gap-8">
+      <ProfileCategory title="Tú" hint="Cómo te ves y qué te mueve.">
+        <IdentityCard />
+        <AboutYouCard />
+      </ProfileCategory>
+
+      <ProfileCategory title="Tu sueño" hint="Lo que el motor usa para calcular la hora.">
+        <SleepPreferences />
+      </ProfileCategory>
+
+      <ProfileCategory title="Aspecto" hint="Cómo se ve la app.">
+        <AppearanceCard />
+      </ProfileCategory>
+
+      <ProfileCategory title="Cuenta" hint="Acceso y seguridad.">
+        <AccountCard />
+        <PasswordCard />
+        <SignOutCard />
+      </ProfileCategory>
+
+      <p className="px-2 text-body-sm opacity-60">
         Morfeo es una herramienta de hábitos, no un dispositivo médico. Si el insomnio
         persiste, lo valora un profesional del sueño.
       </p>
     </div>
+  )
+}
+
+/**
+ * Una categoría de ajustes: un encabezado y, debajo, sus tarjetas repartidas en
+ * columnas. El encabezado es lo que convierte una lista de tarjetas en un mapa: dice
+ * de qué va este bloque sin que haya que entrar en cada tarjeta a averiguarlo.
+ */
+function ProfileCategory({
+  title,
+  hint,
+  children,
+}: {
+  title: string
+  hint: string
+  children: ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="border-b pb-2" style={{ borderColor: 'var(--mf-line)' }}>
+        <h2 className="text-headline-sm font-bold">{title}</h2>
+        <p className="text-body-sm opacity-60">{hint}</p>
+      </div>
+      <div className="grid items-start gap-6 lg:grid-cols-2">{children}</div>
+    </section>
   )
 }
 
@@ -105,7 +141,7 @@ function IdentityCard() {
       <div className="flex items-center gap-3">
         <Avatar user={preview} size={52} />
         <div>
-          <h2 className="text-headline-sm font-bold">Identidad</h2>
+          <h3 className="text-headline-sm font-bold">Identidad</h3>
           <p className="text-body-sm opacity-70">Cómo te ves tú y cómo te ve la otra persona.</p>
         </div>
       </div>
@@ -204,10 +240,12 @@ function AboutYouCard() {
 
   const goal = patch.goal !== undefined ? patch.goal : user.goal
   const chronotype = patch.chronotype ?? user.chronotype
+  const birthYear = patch.birth_year !== undefined ? patch.birth_year : user.birthYear
+  const currentYear = new Date().getFullYear()
 
   return (
     <SurfaceCard className="flex flex-col gap-4">
-      <h2 className="text-headline-sm font-bold">Sobre ti</h2>
+      <h3 className="text-headline-sm font-bold">Sobre ti</h3>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-body-sm font-semibold">Cronotipo</legend>
@@ -253,6 +291,36 @@ function AboutYouCard() {
         <span className="font-normal opacity-60">Se te enseña en la portada. No entra en el cálculo.</span>
       </label>
 
+      <label className="flex flex-col gap-1 text-body-sm font-semibold">
+        Año de nacimiento (opcional)
+        <input
+          type="number"
+          min={1900}
+          max={currentYear - 13}
+          value={birthYear ?? ''}
+          onChange={(e) =>
+            // Vacío borra (null); un año, se guarda. Se manda solo si es un año completo
+            // y con sentido, para no pegar un patch por cada tecla mientras se escribe.
+            setPatch((p) => {
+              const raw = e.target.value
+              if (raw === '') return { ...p, birth_year: null }
+              const year = Number(raw)
+              return year >= 1900 && year <= currentYear - 13
+                ? { ...p, birth_year: year }
+                : p
+            })
+          }
+          placeholder="1995"
+          className="min-h-touch rounded-md px-3 font-normal"
+          style={inputStyle}
+        />
+        <span className="font-normal opacity-60">
+          {birthYear
+            ? `Tienes unos ${currentYear - birthYear} años. De momento solo es un dato tuyo; no cambia el cálculo.`
+            : 'Guardamos el año, no la edad, para que no caduque cada cumpleaños.'}
+        </span>
+      </label>
+
       <Button
         fullWidth
         onClick={() => save.mutate()}
@@ -288,7 +356,7 @@ function SleepPreferences() {
 
   return (
     <SurfaceCard className="flex flex-col gap-4">
-      <h2 className="text-headline-sm font-bold">Tus horarios</h2>
+      <h3 className="text-headline-sm font-bold">Tus horarios</h3>
 
       <label className="flex flex-col gap-1 text-body-sm font-semibold">
         Hora a la que necesitas levantarte
@@ -443,7 +511,7 @@ function AppearanceCard() {
   return (
     <SurfaceCard className="flex flex-col gap-4">
       <div>
-        <h2 className="text-headline-sm font-bold">Aspecto</h2>
+        <h3 className="text-headline-sm font-bold">Aspecto</h3>
         <p className="mt-1 text-body-sm opacity-70">
           El modo noche profunda quita los blancos y los azules. No es capricho: la luz
           azul es la que más frena la melatonina, y el tema oscuro normal sigue teniendo
@@ -529,7 +597,7 @@ function AccountCard() {
 
   return (
     <SurfaceCard className="flex flex-col gap-4">
-      <h2 className="text-headline-sm font-bold">Cuenta</h2>
+      <h3 className="text-headline-sm font-bold">Cuenta</h3>
 
       <div>
         <p className="text-body-sm opacity-60">Usuario</p>
@@ -643,7 +711,7 @@ function PasswordCard() {
 
   return (
     <SurfaceCard>
-      <h2 className="mb-1 text-headline-sm font-bold">Cambiar la contraseña</h2>
+      <h3 className="mb-1 text-headline-sm font-bold">Cambiar la contraseña</h3>
       <p className="mb-4 text-body-sm opacity-70">
         Se cierran todas las sesiones, también esta: si alguien tenía la contraseña
         anterior, cambiarla sin echarlo no le quitaría el acceso.
