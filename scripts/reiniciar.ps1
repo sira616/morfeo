@@ -23,13 +23,24 @@ foreach ($listener in $listeners) {
 Start-Sleep -Seconds 2
 
 Start-ScheduledTask -TaskName Morfeo
-Start-Sleep -Seconds 6
 
-try {
-    $health = Invoke-WebRequest "http://127.0.0.1:$port/health" -UseBasicParsing -TimeoutSec 5
+# Reintentar en vez de comprobar una sola vez: el arranque aplica las migraciones antes
+# de escuchar, así que una comprobación a los 6 s daba un falso "no responde" mientras
+# el servidor en realidad estaba subiendo. Se sondea hasta 20 s.
+$health = $null
+foreach ($intento in 1..20) {
+    Start-Sleep -Seconds 1
+    try {
+        $health = Invoke-WebRequest "http://127.0.0.1:$port/health" -UseBasicParsing -TimeoutSec 2
+        if ($health.StatusCode -eq 200) { break }
+    } catch {
+        $health = $null
+    }
+}
+
+if ($health -and $health.StatusCode -eq 200) {
     $started = (Get-Process -Id (Get-NetTCPConnection -LocalPort $port -State Listen).OwningProcess).StartTime
     Write-Host "Morfeo responde ($($health.StatusCode)). Proceso iniciado a las $started." -ForegroundColor Green
-} catch {
-    Write-Warning "Morfeo no responde: $($_.Exception.Message)"
-    Write-Warning "Mira la tarea 'Morfeo' en el Programador de tareas."
+} else {
+    Write-Warning "Morfeo no responde tras 20 s. Mira la tarea 'Morfeo' en el Programador de tareas."
 }
