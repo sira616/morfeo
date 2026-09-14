@@ -255,6 +255,13 @@ def resolve_wake_target(
     checkin = db.scalar(select(Checkin).where(Checkin.user_id == user.id, Checkin.day == day))
     if checkin and checkin.wake_target:
         return checkin.wake_target, "checkin"
+
+    # La noche de `day` despierta a la mañana SIGUIENTE, así que lo que decide si es
+    # finde es el día de después: la noche del viernes despierta en sábado y ya cuenta.
+    # weekday() da 5 y 6 para sábado y domingo.
+    if user.weekend_wake_time is not None and (day + timedelta(days=1)).weekday() >= 5:
+        return user.weekend_wake_time, "perfil"
+
     return user.default_wake_time, "perfil"
 
 

@@ -26,6 +26,8 @@ from app.content.sleep_tips import (
     SIGNAL_LATE_EXERCISE,
     SIGNAL_LONG_NAP,
     SIGNAL_LOW_EFFICIENCY,
+    SIGNAL_CHRONOTYPE_LARK,
+    SIGNAL_CHRONOTYPE_OWL,
     SIGNAL_LOW_MOOD,
     TIPS,
     Tip,
@@ -87,6 +89,13 @@ def signals(db: DbSession, user: User, day: date) -> set[str]:
     reg = insights_service.regularity(db, user, day)
     if reg is not None and reg.score < IRREGULAR_SCORE:
         found.add(SIGNAL_IRREGULAR)
+
+    # El cronotipo no se mide, se declara: entra como una señal más para que su
+    # consejo salga priorizado, que es todo lo que promete el perfil.
+    if user.chronotype == "buho":
+        found.add(SIGNAL_CHRONOTYPE_OWL)
+    elif user.chronotype == "alondra":
+        found.add(SIGNAL_CHRONOTYPE_LARK)
 
     return found
 

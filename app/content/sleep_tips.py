@@ -44,6 +44,10 @@ SIGNAL_IRREGULAR = "irregularidad"
 SIGNAL_LONG_NAP = "siesta_larga"
 SIGNAL_HIGH_DEBT = "deuda_alta"
 SIGNAL_LOW_MOOD = "animo_bajo"
+# El cronotipo declarado. No sale de los datos como el resto: lo elige la persona
+# en el perfil. Prioriza consejos pertinentes a su ritmo sin tocar el cálculo.
+SIGNAL_CHRONOTYPE_OWL = "cronotipo_buho"
+SIGNAL_CHRONOTYPE_LARK = "cronotipo_alondra"
 
 
 TIPS: tuple[Tip, ...] = (
@@ -450,6 +454,33 @@ TIPS: tuple[Tip, ...] = (
         evidence="alta",
         source="Guía de práctica clínica de la AASM, 2021",
         applies_when=SIGNAL_LOW_EFFICIENCY,
+    ),
+    Tip(
+        id="cronotipo-buho-luz-manana",
+        title="Si eres de noche, la luz de la mañana es tu mejor palanca",
+        body=(
+            "El cronotipo tardío no se corrige a voluntad, pero la luz brillante nada más "
+            "levantarte adelanta el reloj interno. Diez o quince minutos de luz de día al "
+            "despertar, mejor fuera, empujan tu ritmo hacia adelante más que cualquier "
+            "esfuerzo por acostarte antes."
+        ),
+        category="ritmo",
+        evidence="media",
+        source="Revisiones sobre fototerapia y fase circadiana",
+        applies_when=SIGNAL_CHRONOTYPE_OWL,
+    ),
+    Tip(
+        id="cronotipo-alondra-luz-tarde",
+        title="Si madrugas de forma natural, cuida la luz de la tarde",
+        body=(
+            "El cronotipo temprano tiende a despertarse de madrugada sin querer. Recibir "
+            "algo de luz al final de la tarde retrasa un poco el reloj y ayuda a no "
+            "abrir los ojos a las cinco. Evita, eso sí, la pantalla brillante ya en la cama."
+        ),
+        category="ritmo",
+        evidence="media",
+        source="Revisiones sobre fototerapia y fase circadiana",
+        applies_when=SIGNAL_CHRONOTYPE_LARK,
     ),
 )
 

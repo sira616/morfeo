@@ -1,4 +1,5 @@
 from datetime import time
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -42,6 +43,15 @@ class AuthUserOut(BaseModel):
     declaredLatencyMinutes: int
     wearableProvider: str | None
 
+    # Personalización.
+    weekendWakeTime: time | None
+    avatarColor: str
+    avatarEmoji: str | None
+    goal: str | None
+    chronotype: str
+    timezone: str
+    poorEfficiencyThreshold: float
+
     @classmethod
     def from_user(cls, user: User) -> "AuthUserOut":
         return cls(
@@ -56,6 +66,13 @@ class AuthUserOut(BaseModel):
             sleepNeedMinutes=user.sleep_need_minutes,
             declaredLatencyMinutes=user.declared_latency_minutes,
             wearableProvider=user.wearable_provider,
+            weekendWakeTime=user.weekend_wake_time,
+            avatarColor=user.avatar_color,
+            avatarEmoji=user.avatar_emoji,
+            goal=user.goal,
+            chronotype=user.chronotype,
+            timezone=user.timezone,
+            poorEfficiencyThreshold=user.poor_efficiency_threshold,
         )
 
 
@@ -108,3 +125,18 @@ class ProfileIn(BaseModel):
     sleep_need_minutes: int | None = Field(default=None, ge=300, le=660)
     declared_latency_minutes: int | None = Field(default=None, ge=0, le=180)
     timezone: str | None = Field(default=None, max_length=64)
+
+    # Personalización. Los tres primeros son "vaciables": mandar `null` es una orden de
+    # borrar, no "no lo toques" (ver CLEARABLE_PROFILE_FIELDS en app/api/me.py).
+    weekend_wake_time: time | None = None
+    avatar_emoji: str | None = Field(default=None, max_length=8)
+    goal: str | None = Field(default=None, max_length=140)
+
+    # El color va contra una paleta cerrada: un hex libre podía ser blanco sobre blanco.
+    avatar_color: Literal[
+        "#4fd6a0", "#6c5ce7", "#f4b860", "#f0797b", "#6688ff", "#3fd1c0"
+    ] | None = None
+    chronotype: Literal["alondra", "intermedio", "buho"] | None = None
+    # Umbral de eficiencia por debajo del cual se avisa de mala racha. 0.70–0.95: por
+    # debajo de 0.70 no avisaría casi nunca, por encima de 0.95 avisaría siempre.
+    poor_efficiency_threshold: float | None = Field(default=None, ge=0.70, le=0.95)

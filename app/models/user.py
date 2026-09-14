@@ -40,6 +40,21 @@ class User(Base):
     display_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     timezone: Mapped[str] = mapped_column(String(64), default="Europe/Madrid")
 
+    # --- Personalización visible ---
+    # Un color de una paleta fija (no rueda libre: así el avatar siempre contrasta con
+    # el texto) y un emoji opcional. Es lo único puramente cosmético del modelo.
+    avatar_color: Mapped[str] = mapped_column(String(7), default="#4fd6a0")
+    avatar_emoji: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+
+    # Frase corta que la persona se pone como objetivo. No entra en ningún cálculo: se
+    # enseña y ya. Sirve para recordarse el porqué, que es lo que sostiene un hábito.
+    goal: Mapped[Optional[str]] = mapped_column(String(140), nullable=True)
+
+    # Cronotipo declarado: "alondra" | "intermedio" | "buho". NO cambia la cuenta —esa
+    # se ancla en tu hora real de despertar, que ya recoge tu ritmo— sino el tono de los
+    # consejos y algún texto. Fingir que mueve la hora sería inventarse ciencia.
+    chronotype: Mapped[str] = mapped_column(String(16), default="intermedio")
+
     onboarding_done: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Acceso al panel de /dev. No se acepta nunca del cliente: lo fija el servidor a
@@ -49,6 +64,13 @@ class User(Base):
     # Hora a la que necesita levantarse entre semana. Es el ancla del cálculo: la
     # recomendación se construye hacia atrás desde aquí.
     default_wake_time: Mapped[time] = mapped_column(Time, default=time(7, 0))
+
+    # Hora de despertar los fines de semana. `None` = igual que entre semana. Se aplica
+    # a las noches cuya mañana cae en sábado o domingo (la noche del viernes despierta
+    # en sábado, así que ya cuenta como finde). Cambiar de horario el finde es de lo que
+    # más desajusta el sueño; tener el dato deja que la recomendación lo tenga en cuenta
+    # en vez de recomendar la hora de diario un domingo.
+    weekend_wake_time: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     sleep_need_minutes: Mapped[int] = mapped_column(Integer, default=480)
 
     # Lo que la persona *cree* que tarda en dormirse. Sirve mientras no haya noches
