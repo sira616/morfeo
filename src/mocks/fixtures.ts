@@ -22,6 +22,13 @@ export const mockUser: AuthUser = {
   sleepNeedMinutes: 480,
   declaredLatencyMinutes: 25,
   wearableProvider: 'import',
+  weekendWakeTime: null,
+  avatarColor: '#4fd6a0',
+  avatarEmoji: null,
+  goal: null,
+  chronotype: 'intermedio',
+  timezone: 'Europe/Madrid',
+  poorEfficiencyThreshold: 0.85,
 }
 
 /** Fechas relativas a hoy: si fueran fijas, el heatmap se saldría de la ventana. */

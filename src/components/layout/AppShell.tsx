@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { Moon } from 'lucide-react'
 import { ThemeToggle } from '@/components/molecules/ThemeToggle'
+import { Avatar } from '@/components/atoms/Avatar'
 import { ADMIN_NAV, NAV } from '@/components/layout/nav'
 import { cn } from '@/lib/utils'
 import { routes } from '@/router/paths'
@@ -65,8 +66,9 @@ export function AppShell() {
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {user ? (
-            <span className="max-w-40 truncate text-body-sm opacity-70">
-              {user.displayName}
+            <span className="flex min-w-0 items-center gap-2">
+              <Avatar user={user} size={28} />
+              <span className="truncate text-body-sm opacity-70">{user.displayName}</span>
             </span>
           ) : null}
           <ThemeToggle />

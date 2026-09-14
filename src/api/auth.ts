@@ -125,6 +125,14 @@ export type ProfilePatch = {
   sleep_need_minutes?: number
   declared_latency_minutes?: number
   timezone?: string
+  // `null` en estos tres es una orden de borrar (quitar el horario de finde, el emoji
+  // o el objetivo); el backend los trata distinto del resto. Ver CLEARABLE en me.py.
+  weekend_wake_time?: string | null
+  avatar_emoji?: string | null
+  goal?: string | null
+  avatar_color?: string
+  chronotype?: 'alondra' | 'intermedio' | 'buho'
+  poor_efficiency_threshold?: number
 }
 
 export async function updateProfile(patch: ProfilePatch) {

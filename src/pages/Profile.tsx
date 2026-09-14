@@ -5,6 +5,7 @@ import { BadgeCheck, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/atoms/Button'
 import { Field } from '@/components/atoms/Field'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
+import { Avatar } from '@/components/atoms/Avatar'
 import {
   NOCHE_END_HOUR,
   NOCHE_START_HOUR,
@@ -39,12 +40,14 @@ export function ProfilePage() {
   if (!user) return null
 
   return (
-    // Cinco tarjetas independientes entre sí, así que en escritorio van en dos
+    // Siete tarjetas independientes entre sí, así que en escritorio van en varias
     // columnas: en una sola, a 1440 px, el perfil era una tira estrecha en medio de la
     // pantalla y había que bajar hasta el final teniendo sitio de sobra al lado.
     // `items-start` para que cada tarjeta mida lo suyo en vez de estirarse a la altura
     // de la más alta de su fila.
     <div className="mx-auto grid max-w-[1600px] items-start gap-6 lg:grid-cols-2 2xl:grid-cols-3">
+      <IdentityCard />
+      <AboutYouCard />
       <SleepPreferences />
       <AppearanceCard />
       <AccountCard />
@@ -55,6 +58,214 @@ export function ProfilePage() {
         persiste, lo valora un profesional del sueño.
       </p>
     </div>
+  )
+}
+
+/** Los seis colores de avatar. Cerrados a propósito: todos claros, para que el texto
+ *  oscuro de encima contraste sin tener que calcular nada. Coinciden con el backend. */
+const AVATAR_COLORS = [
+  '#4fd6a0',
+  '#6c5ce7',
+  '#f4b860',
+  '#f0797b',
+  '#6688ff',
+  '#3fd1c0',
+] as const
+
+/**
+ * Identidad: el avatar, el nombre para mostrar, el color y un emoji.
+ *
+ * Todo esto es cosmético y no toca ningún cálculo, pero es lo que hace que la app sea
+ * «la mía» y no una hoja de cálculo: con dos personas compartiéndola, un avatar con
+ * color distingue de un vistazo quién ha entrado.
+ */
+function IdentityCard() {
+  const user = useAuthStore((s) => s.user)!
+  const queryClient = useQueryClient()
+  const [patch, setPatch] = useState<ProfilePatch>({})
+  const save = useMutation({
+    mutationFn: () => updateProfile(patch),
+    onSuccess: () => {
+      setPatch({})
+      queryClient.invalidateQueries({ queryKey: ['dev'] })
+    },
+  })
+
+  // La vista previa mezcla lo guardado con lo que se está tocando, para ver el avatar
+  // cambiar mientras eliges, no después de guardar.
+  const preview = {
+    ...user,
+    displayName: patch.display_name ?? user.displayName,
+    avatarColor: patch.avatar_color ?? user.avatarColor,
+    avatarEmoji: patch.avatar_emoji !== undefined ? patch.avatar_emoji : user.avatarEmoji,
+  }
+
+  return (
+    <SurfaceCard className="flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <Avatar user={preview} size={52} />
+        <div>
+          <h2 className="text-headline-sm font-bold">Identidad</h2>
+          <p className="text-body-sm opacity-70">Cómo te ves tú y cómo te ve la otra persona.</p>
+        </div>
+      </div>
+
+      <label className="flex flex-col gap-1 text-body-sm font-semibold">
+        Nombre para mostrar
+        <input
+          type="text"
+          maxLength={120}
+          value={patch.display_name ?? user.displayName}
+          onChange={(e) => setPatch((p) => ({ ...p, display_name: e.target.value }))}
+          className="min-h-touch rounded-md px-3 font-normal"
+          style={inputStyle}
+        />
+      </label>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-body-sm font-semibold">Color</legend>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {AVATAR_COLORS.map((color) => {
+            const activo = (patch.avatar_color ?? user.avatarColor) === color
+            return (
+              <button
+                key={color}
+                type="button"
+                aria-label={color}
+                aria-pressed={activo}
+                onClick={() => setPatch((p) => ({ ...p, avatar_color: color }))}
+                className="size-9 rounded-full focus-visible:outline-none focus-visible:ring-2"
+                style={{
+                  background: color,
+                  boxShadow: activo ? `0 0 0 2px var(--mf-bg-0), 0 0 0 4px ${color}` : undefined,
+                }}
+              />
+            )
+          })}
+        </div>
+      </fieldset>
+
+      <label className="flex flex-col gap-1 text-body-sm font-semibold">
+        Emoji (opcional)
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={patch.avatar_emoji ?? user.avatarEmoji ?? ''}
+            onChange={(e) =>
+              // Un emoji es un carácter, pero puede ocupar varias unidades UTF-16;
+              // [...str] las agrupa bien y evita cortar uno por la mitad.
+              setPatch((p) => ({ ...p, avatar_emoji: [...e.target.value].slice(0, 2).join('') || null }))
+            }
+            placeholder="🌙"
+            className="min-h-touch w-24 rounded-md px-3 text-center text-xl font-normal"
+            style={inputStyle}
+          />
+          <span className="self-center text-body-sm opacity-60">
+            Vacío = la inicial de tu nombre.
+          </span>
+        </div>
+      </label>
+
+      <Button
+        fullWidth
+        onClick={() => save.mutate()}
+        disabled={Object.keys(patch).length === 0 || save.isPending}
+      >
+        {save.isPending ? 'Guardando…' : 'Guardar'}
+      </Button>
+      {save.isSuccess ? (
+        <p role="status" className="text-body-sm" style={{ color: 'var(--mf-good)' }}>
+          Guardado.
+        </p>
+      ) : null}
+    </SurfaceCard>
+  )
+}
+
+const CHRONOTYPES: { value: NonNullable<ProfilePatch['chronotype']>; label: string; hint: string }[] = [
+  { value: 'alondra', label: 'Alondra', hint: 'Rindes por la mañana' },
+  { value: 'intermedio', label: 'Intermedio', hint: 'Ni una cosa ni otra' },
+  { value: 'buho', label: 'Búho', hint: 'Rindes de noche' },
+]
+
+/**
+ * Sobre ti: cronotipo y objetivo.
+ *
+ * El cronotipo **no cambia la hora recomendada** —esa se ancla en tu hora real de
+ * despertar, que ya recoge tu ritmo—; ajusta el tono de los consejos. Decirlo evita la
+ * decepción de elegir «búho» y no ver moverse nada. El objetivo es una frase tuya que
+ * no entra en ningún cálculo: está para recordarte el porqué, que es lo que sostiene un
+ * hábito cuando la novedad se pasa.
+ */
+function AboutYouCard() {
+  const user = useAuthStore((s) => s.user)!
+  const [patch, setPatch] = useState<ProfilePatch>({})
+  const save = useMutation({ mutationFn: () => updateProfile(patch), onSuccess: () => setPatch({}) })
+
+  const goal = patch.goal !== undefined ? patch.goal : user.goal
+  const chronotype = patch.chronotype ?? user.chronotype
+
+  return (
+    <SurfaceCard className="flex flex-col gap-4">
+      <h2 className="text-headline-sm font-bold">Sobre ti</h2>
+
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-body-sm font-semibold">Cronotipo</legend>
+        <p className="text-body-sm opacity-60">
+          No cambia la hora recomendada —esa sale de tu hora real de despertar—, solo el
+          tono de los consejos.
+        </p>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {CHRONOTYPES.map((opcion) => {
+            const activo = chronotype === opcion.value
+            return (
+              <button
+                key={opcion.value}
+                type="button"
+                aria-pressed={activo}
+                onClick={() => setPatch((p) => ({ ...p, chronotype: opcion.value }))}
+                className="min-h-touch flex-1 rounded-md px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2"
+                style={{
+                  background: activo ? 'var(--mf-primary)' : 'var(--mf-surf-2)',
+                  color: activo ? 'var(--mf-on-primary)' : undefined,
+                  border: '1px solid var(--mf-line-strong)',
+                }}
+              >
+                <span className="block font-semibold">{opcion.label}</span>
+                <span className="block text-body-sm opacity-80">{opcion.hint}</span>
+              </button>
+            )
+          })}
+        </div>
+      </fieldset>
+
+      <label className="flex flex-col gap-1 text-body-sm font-semibold">
+        Tu objetivo (opcional)
+        <input
+          type="text"
+          maxLength={140}
+          value={goal ?? ''}
+          onChange={(e) => setPatch((p) => ({ ...p, goal: e.target.value || null }))}
+          placeholder="Dormir mejor antes de las oposiciones"
+          className="min-h-touch rounded-md px-3 font-normal"
+          style={inputStyle}
+        />
+        <span className="font-normal opacity-60">Se te enseña en la portada. No entra en el cálculo.</span>
+      </label>
+
+      <Button
+        fullWidth
+        onClick={() => save.mutate()}
+        disabled={Object.keys(patch).length === 0 || save.isPending}
+      >
+        {save.isPending ? 'Guardando…' : 'Guardar'}
+      </Button>
+      {save.isSuccess ? (
+        <p role="status" className="text-body-sm" style={{ color: 'var(--mf-good)' }}>
+          Guardado.
+        </p>
+      ) : null}
+    </SurfaceCard>
   )
 }
 
@@ -72,6 +283,8 @@ function SleepPreferences() {
   const wakeTime = patch.default_wake_time ?? user.defaultWakeTime
   const sleepNeed = patch.sleep_need_minutes ?? user.sleepNeedMinutes
   const latency = patch.declared_latency_minutes ?? user.declaredLatencyMinutes
+  const weekend = patch.weekend_wake_time !== undefined ? patch.weekend_wake_time : user.weekendWakeTime
+  const threshold = patch.poor_efficiency_threshold ?? user.poorEfficiencyThreshold
 
   return (
     <SurfaceCard className="flex flex-col gap-4">
@@ -89,6 +302,44 @@ function SleepPreferences() {
           style={inputStyle}
         />
       </label>
+
+      {/* El horario de finde es lo único de esta tarjeta que no es "tu media": es un
+          segundo ancla para los días que cambias de ritmo. Va con casilla porque su
+          estado por defecto —igual que entre semana— es una opción legítima, no un
+          hueco por rellenar. */}
+      <div className="flex flex-col gap-2">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={weekend !== null}
+            onChange={(e) =>
+              setPatch((p) => ({
+                ...p,
+                weekend_wake_time: e.target.checked ? user.defaultWakeTime : null,
+              }))
+            }
+            className="mt-1 size-5 shrink-0"
+          />
+          <span>
+            <span className="font-semibold">Me levanto a otra hora el finde</span>
+            <span className="block text-body-sm opacity-70">
+              Se aplica a las noches de viernes y sábado, que despiertan en fin de semana.
+            </span>
+          </span>
+        </label>
+        {weekend !== null ? (
+          <input
+            type="time"
+            aria-label="Hora de despertar el fin de semana"
+            value={weekend.slice(0, 5)}
+            onChange={(e) =>
+              setPatch((p) => ({ ...p, weekend_wake_time: `${e.target.value}:00` }))
+            }
+            className="min-h-touch rounded-md px-3 font-normal"
+            style={inputStyle}
+          />
+        ) : null}
+      </div>
 
       <label className="flex flex-col gap-1 text-body-sm font-semibold">
         Cuánto sueño necesitas ({Math.floor(sleepNeed / 60)} h {sleepNeed % 60} min)
@@ -118,6 +369,33 @@ function SleepPreferences() {
           En cuanto haya noches medidas manda el dato del reloj, no este.
         </span>
       </label>
+
+      {/* Ajuste fino, plegado para no competir con lo de arriba: casi nadie lo toca. */}
+      <details className="text-body-sm">
+        <summary className="cursor-pointer font-semibold opacity-80">Ajustes avanzados</summary>
+        <div className="mt-3 flex flex-col gap-1">
+          <label className="flex flex-col gap-1 font-semibold">
+            Cuándo avisarte de una mala racha ({Math.round(threshold * 100)}% de eficiencia)
+            <input
+              type="range"
+              min={0.7}
+              max={0.95}
+              step={0.01}
+              value={threshold}
+              onChange={(e) =>
+                setPatch((p) => ({ ...p, poor_efficiency_threshold: Number(e.target.value) }))
+              }
+            />
+            <span className="font-normal opacity-70">
+              Eficiencia es el tiempo dormido frente al tiempo en la cama. Más alto = más
+              exigente, avisa antes.
+            </span>
+          </label>
+          <p className="mt-2 font-normal opacity-60">
+            Zona horaria: {user.timezone}. Se detecta sola; escríbeme si vives en otra.
+          </p>
+        </div>
+      </details>
 
       <Button
         fullWidth

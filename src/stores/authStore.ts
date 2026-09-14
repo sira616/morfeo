@@ -14,6 +14,14 @@ export type AuthUser = {
   sleepNeedMinutes: number
   declaredLatencyMinutes: number
   wearableProvider: string | null
+  // Personalización.
+  weekendWakeTime: string | null
+  avatarColor: string
+  avatarEmoji: string | null
+  goal: string | null
+  chronotype: 'alondra' | 'intermedio' | 'buho'
+  timezone: string
+  poorEfficiencyThreshold: number
 }
 
 type AuthState = {
