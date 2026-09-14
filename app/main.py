@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import auth, bedtime, checkin, dev, insights, me, sleep
 from app.core.config import IS_PRODUCTION, settings
 from app.core.migrations import upgrade_to_head
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.spa import mount_spa
 from app.models import (  # noqa: F401 — registran los modelos en Base.metadata
     AuditEvent,
@@ -41,6 +42,10 @@ app = FastAPI(
     redoc_url="/redoc" if _docs_enabled else None,
     openapi_url="/openapi.json" if _docs_enabled else None,
 )
+
+# Antes que CORS en el código, así que envuelve por fuera: sus cabeceras salen en toda
+# respuesta, también en las que CORS rechaza o en un preflight.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
