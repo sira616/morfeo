@@ -55,6 +55,12 @@ class User(Base):
     # consejos y algún texto. Fingir que mueve la hora sería inventarse ciencia.
     chronotype: Mapped[str] = mapped_column(String(16), default="intermedio")
 
+    # Año de nacimiento, no la edad: la edad caduca cada cumpleaños y habría que
+    # reescribirla; el año no. `None` = no dado. Es opcional y de momento solo informa
+    # (la necesidad de sueño de referencia cambia poco entre adultos), pero deja la
+    # puerta abierta a ajustar el valor por defecto para adolescentes o mayores.
+    birth_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
     onboarding_done: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Acceso al panel de /dev. No se acepta nunca del cliente: lo fija el servidor a

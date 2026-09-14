@@ -155,3 +155,16 @@ def test_el_cronotipo_prioriza_su_consejo(client):
         assert "cronotipo_buho" in activas
         elegidos = tips_service.pick(activas, seed="x")
         assert any(t.id == "cronotipo-buho-luz-manana" for t in elegidos)
+
+
+def test_el_ano_de_nacimiento_se_guarda_y_se_vacia(client, auth):
+    puesto = client.patch("/api/me", headers=auth, json={"birth_year": 1995}).json()
+    assert puesto["birthYear"] == 1995
+    # null lo borra, como los demás campos vaciables.
+    vaciado = client.patch("/api/me", headers=auth, json={"birth_year": None}).json()
+    assert vaciado["birthYear"] is None
+
+
+def test_un_ano_de_nacimiento_absurdo_se_rechaza(client, auth):
+    assert client.patch("/api/me", headers=auth, json={"birth_year": 1700}).status_code == 422
+    assert client.patch("/api/me", headers=auth, json={"birth_year": 2025}).status_code == 422

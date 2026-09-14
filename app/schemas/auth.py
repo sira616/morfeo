@@ -51,6 +51,7 @@ class AuthUserOut(BaseModel):
     chronotype: str
     timezone: str
     poorEfficiencyThreshold: float
+    birthYear: int | None
 
     @classmethod
     def from_user(cls, user: User) -> "AuthUserOut":
@@ -73,6 +74,7 @@ class AuthUserOut(BaseModel):
             chronotype=user.chronotype,
             timezone=user.timezone,
             poorEfficiencyThreshold=user.poor_efficiency_threshold,
+            birthYear=user.birth_year,
         )
 
 
@@ -125,6 +127,9 @@ class ProfileIn(BaseModel):
     sleep_need_minutes: int | None = Field(default=None, ge=300, le=660)
     declared_latency_minutes: int | None = Field(default=None, ge=0, le=180)
     timezone: str | None = Field(default=None, max_length=64)
+    # Año de nacimiento. El tope inferior descarta erratas; el superior exige al
+    # menos 13 años, que es el mínimo razonable para una cuenta propia.
+    birth_year: int | None = Field(default=None, ge=1900, le=2013)
 
     # Personalización. Los tres primeros son "vaciables": mandar `null` es una orden de
     # borrar, no "no lo toques" (ver CLEARABLE_PROFILE_FIELDS en app/api/me.py).

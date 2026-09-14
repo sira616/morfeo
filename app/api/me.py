@@ -11,9 +11,9 @@ router = APIRouter(prefix="/api/me", tags=["me"])
 
 # Campos donde `null` significa "bórralo", no "no lo toques". Para el resto, mandar
 # null es no mandarlo: no se puede borrar la hora de despertar dejándola vacía. Estos
-# tres sí se vacían a propósito —quitar el horario de finde, el emoji o el objetivo— y
-# sin esta lista no habría forma de volver atrás una vez puestos.
-CLEARABLE_PROFILE_FIELDS = {"weekend_wake_time", "avatar_emoji", "goal"}
+# sí se vacían a propósito —quitar el horario de finde, el emoji, el objetivo o el año
+# de nacimiento— y sin esta lista no habría forma de volver atrás una vez puestos.
+CLEARABLE_PROFILE_FIELDS = {"weekend_wake_time", "avatar_emoji", "goal", "birth_year"}
 
 
 @router.get("", response_model=MeOut)
