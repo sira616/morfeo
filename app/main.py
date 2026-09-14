@@ -9,7 +9,6 @@ from app.core.config import IS_PRODUCTION, settings
 from app.core import mdns
 from app.core.headers import SecurityHeadersMiddleware
 from app.core.migrations import upgrade_to_head
-from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.spa import mount_spa
 from app.models import (  # noqa: F401 — registran los modelos en Base.metadata
     AuditEvent,
