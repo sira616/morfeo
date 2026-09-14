@@ -25,6 +25,11 @@ anthropic==0.34.2
 # --- Clientes de wearable ---
 httpx==0.27.2
 
+# --- Nombre de red (morfeo.local desde el movil) ---
+# El fichero hosts solo lo lee el ordenador que lo tiene; para que el iPhone resuelva
+# el nombre hace falta responder por mDNS. Ver app/core/mdns.py.
+zeroconf==0.151.3
+
 # --- Testing ---
 pytest==8.3.3
 pytest-asyncio==0.24.0

@@ -14,7 +14,7 @@ import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import Session as DbSession
 
 from app.core import passwords, tokens
@@ -43,9 +43,24 @@ def normalize_username(username: str) -> str:
 
 
 def find_by_login(db: DbSession, login: str) -> User | None:
-    """Busca por usuario o por email: el formulario acepta cualquiera de los dos."""
+    """Busca por usuario o por email: el formulario acepta cualquiera de los dos.
+
+    El email cuenta **solo si está verificado**. Un email sin confirmar es una
+    dirección que alguien ha escrito en un formulario, no una identidad: mientras no
+    llegue el código, no hay ninguna prueba de que sea suya. Aceptarlo aquí lo
+    convertiría en una segunda forma de nombrar la cuenta, y sobre este mismo
+    `find_by_login` es donde se construye la recuperación de contraseña, que es la
+    única razón por la que el campo email existe.
+    """
     value = login.strip().lower()
-    return db.scalar(select(User).where(or_(User.username == value, User.email == value)))
+    return db.scalar(
+        select(User).where(
+            or_(
+                User.username == value,
+                and_(User.email == value, User.email_verified.is_(True)),
+            )
+        )
+    )
 
 
 def create_user(
@@ -77,7 +92,13 @@ def create_user(
 
 def authenticate(db: DbSession, login: str, password: str) -> User:
     user = find_by_login(db, login)
-    if user is None or not passwords.verify(password, user.password_hash):
+    if user is None:
+        # Se gasta el tiempo de un Argon2 aunque no haya nada que comprobar: si no, la
+        # respuesta llega antes y el cronómetro delata qué cuentas existen, por mucho
+        # que el mensaje sea el mismo. Ver passwords.verify_dummy.
+        passwords.verify_dummy(password)
+        raise AuthError("Usuario o contraseña incorrectos.")
+    if not passwords.verify(password, user.password_hash):
         raise AuthError("Usuario o contraseña incorrectos.")
 
     # Subir el coste de Argon2 con el tiempo sin obligar a nadie a cambiar de clave.

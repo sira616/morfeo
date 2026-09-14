@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth, bedtime, checkin, dev, insights, me, sleep
 from app.core.config import IS_PRODUCTION, settings
+from app.core import mdns
+from app.core.headers import SecurityHeadersMiddleware
 from app.core.migrations import upgrade_to_head
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.spa import mount_spa
@@ -26,7 +28,35 @@ async def lifespan(app: FastAPI):
     # Migrar, no `create_all`: crear tablas nuevas es lo fácil, y lo que fallaba era
     # cambiar las que ya existían. Ver app/core/migrations.py.
     upgrade_to_head()
+
+    # El nombre de red va aquí y no en un script aparte para no tener dos procesos que
+    # arrancar y matar. Que falle no puede tumbar la app: se pierde el nombre bonito,
+    # no el servidor, y la IP directa sigue funcionando.
+    anunciado = None
+    if settings.MDNS_NAME.strip():
+        try:
+            anunciado = await mdns.announce(settings.MDNS_NAME, settings.MDNS_PORT)
+            # flush explícito: la tarea programada redirige la salida a un fichero, y
+            # sin esto la línea se queda en el buffer justo cuando hace falta leerla,
+            # que es al depurar por qué el móvil no encuentra el nombre.
+            print(
+                f"Anunciando http://{settings.MDNS_NAME}:{settings.MDNS_PORT} "
+                f"por mDNS desde {anunciado}",
+                flush=True,
+            )
+        except Exception as exc:
+            # El tipo, y no solo el mensaje: las excepciones de zeroconf vienen con el
+            # mensaje vacío, y "no se pudo anunciar ()" no ayuda a nadie.
+            print(
+                f"AVISO: no se pudo anunciar {settings.MDNS_NAME} por mDNS "
+                f"({type(exc).__name__}: {exc}). La IP directa sigue funcionando.",
+                flush=True,
+            )
+
     yield
+
+    if anunciado is not None:
+        await mdns.stop()
 
 
 # En producción no se publican /docs, /redoc ni /openapi.json: son el mapa completo de
@@ -57,6 +87,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "PUT"],
     allow_headers=["Authorization", "Content-Type", "Accept"],
 )
+
+# Se añade después del CORS, así que envuelve por fuera: las cabeceras se ponen también
+# en las respuestas que genera el propio CORS y en las de error.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router)
 app.include_router(me.router)
