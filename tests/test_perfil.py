@@ -168,3 +168,42 @@ def test_el_ano_de_nacimiento_se_guarda_y_se_vacia(client, auth):
 def test_un_ano_de_nacimiento_absurdo_se_rechaza(client, auth):
     assert client.patch("/api/me", headers=auth, json={"birth_year": 1700}).status_code == 422
     assert client.patch("/api/me", headers=auth, json={"birth_year": 2025}).status_code == 422
+
+
+# --- Foto de perfil -----------------------------------------------------------------
+
+import base64 as _b64
+
+
+def _png_data_url():
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 40
+    return "data:image/png;base64," + _b64.b64encode(png).decode()
+
+
+def test_la_foto_se_guarda_normalizada_y_se_vacia(client, auth):
+    puesta = client.patch("/api/me", headers=auth, json={"avatar_image": _png_data_url()}).json()
+    assert puesta["avatarUrl"].startswith("data:image/png;base64,")
+    # null la borra, como los demás vaciables.
+    vaciada = client.patch("/api/me", headers=auth, json={"avatar_image": None}).json()
+    assert vaciada["avatarUrl"] is None
+
+
+def test_un_svg_disfrazado_de_imagen_se_rechaza(client, auth):
+    """El único formato de 'imagen' que ejecuta script al pintarlo; fuera a propósito."""
+    svg = _b64.b64encode(b"<svg><script>alert(1)</script></svg>").decode()
+    r = client.patch("/api/me", headers=auth, json={"avatar_image": "data:image/svg+xml;base64," + svg})
+    assert r.status_code == 422
+
+
+def test_html_disfrazado_de_png_se_rechaza(client, auth):
+    """El mime lo decide el servidor por los magic bytes, no el `data:` del cliente."""
+    fake = _b64.b64encode(b"<html>no soy un png</html>").decode()
+    r = client.patch("/api/me", headers=auth, json={"avatar_image": "data:image/png;base64," + fake})
+    assert r.status_code == 422
+
+
+def test_una_foto_enorme_se_rechaza(client, auth):
+    # Un PNG con cabecera válida pero de más de 200 KB descodificados.
+    gordo = b"\x89PNG\r\n\x1a\n" + b"\x00" * 250_000
+    url = "data:image/png;base64," + _b64.b64encode(gordo).decode()
+    assert client.patch("/api/me", headers=auth, json={"avatar_image": url}).status_code == 422

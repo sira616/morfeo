@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, time
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Time, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, Time, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -45,6 +45,10 @@ class User(Base):
     # el texto) y un emoji opcional. Es lo único puramente cosmético del modelo.
     avatar_color: Mapped[str] = mapped_column(String(7), default="#4fd6a0")
     avatar_emoji: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    # Foto de perfil como data URL ya normalizado (ver app/core/avatar.py). Se guarda
+    # el texto entero y no bytes+mime aparte: es una sola persona con una foto pequeña,
+    # y así la salida es echarlo tal cual. `None` = sin foto, cae al color+emoji/inicial.
+    avatar_image: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Frase corta que la persona se pone como objetivo. No entra en ningún cálculo: se
     # enseña y ya. Sirve para recordarse el porqué, que es lo que sostiene un hábito.

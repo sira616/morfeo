@@ -52,6 +52,7 @@ class AuthUserOut(BaseModel):
     timezone: str
     poorEfficiencyThreshold: float
     birthYear: int | None
+    avatarUrl: str | None
 
     @classmethod
     def from_user(cls, user: User) -> "AuthUserOut":
@@ -75,6 +76,7 @@ class AuthUserOut(BaseModel):
             timezone=user.timezone,
             poorEfficiencyThreshold=user.poor_efficiency_threshold,
             birthYear=user.birth_year,
+            avatarUrl=user.avatar_image,
         )
 
 
@@ -136,6 +138,10 @@ class ProfileIn(BaseModel):
     weekend_wake_time: time | None = None
     avatar_emoji: str | None = Field(default=None, max_length=8)
     goal: str | None = Field(default=None, max_length=140)
+    # Foto de perfil como data URL. Se valida y se re-normaliza en la ruta (ver
+    # app/core/avatar.py); aquí solo un tope de texto para que un cuerpo enorme no
+    # llegue siquiera a validarse.
+    avatar_image: str | None = Field(default=None, max_length=300_000)
 
     # El color va contra una paleta cerrada: un hex libre podía ser blanco sobre blanco.
     avatar_color: Literal[
