@@ -6,6 +6,7 @@ import { Button } from '@/components/atoms/Button'
 import { Field } from '@/components/atoms/Field'
 import { SurfaceCard } from '@/components/atoms/SurfaceCard'
 import { Avatar } from '@/components/atoms/Avatar'
+import { resizeImageToDataUrl } from '@/lib/resizeImage'
 import {
   NOCHE_END_HOUR,
   NOCHE_START_HOUR,
@@ -119,6 +120,8 @@ function IdentityCard() {
   const user = useAuthStore((s) => s.user)!
   const queryClient = useQueryClient()
   const [patch, setPatch] = useState<ProfilePatch>({})
+  const [fotoError, setFotoError] = useState<string | null>(null)
+  const [procesando, setProcesando] = useState(false)
   const save = useMutation({
     mutationFn: () => updateProfile(patch),
     onSuccess: () => {
@@ -134,6 +137,20 @@ function IdentityCard() {
     displayName: patch.display_name ?? user.displayName,
     avatarColor: patch.avatar_color ?? user.avatarColor,
     avatarEmoji: patch.avatar_emoji !== undefined ? patch.avatar_emoji : user.avatarEmoji,
+    avatarUrl: patch.avatar_image !== undefined ? patch.avatar_image : user.avatarUrl,
+  }
+
+  async function onFile(file: File) {
+    setFotoError(null)
+    setProcesando(true)
+    try {
+      const dataUrl = await resizeImageToDataUrl(file)
+      setPatch((p) => ({ ...p, avatar_image: dataUrl }))
+    } catch {
+      setFotoError('No se pudo procesar esa imagen. Prueba con otra.')
+    } finally {
+      setProcesando(false)
+    }
   }
 
   return (
@@ -144,6 +161,42 @@ function IdentityCard() {
           <h3 className="text-headline-sm font-bold">Identidad</h3>
           <p className="text-body-sm opacity-70">Cómo te ves tú y cómo te ve la otra persona.</p>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <span className="text-body-sm font-semibold">Foto</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            className="min-h-touch cursor-pointer rounded-md px-3 py-2 text-body-sm focus-within:ring-2"
+            style={{ background: 'var(--mf-surf-2)', border: '1px solid var(--mf-line-strong)' }}
+          >
+            {procesando ? 'Procesando…' : preview.avatarUrl ? 'Cambiar foto' : 'Subir foto'}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void onFile(file)
+                e.target.value = ''
+              }}
+            />
+          </label>
+          {preview.avatarUrl ? (
+            <Button variant="ghost" onClick={() => setPatch((p) => ({ ...p, avatar_image: null }))}>
+              Quitar foto
+            </Button>
+          ) : null}
+        </div>
+        <span className="text-body-sm opacity-60">
+          Se recorta a un cuadrado y se guarda pequeña. Con foto, el color y el emoji
+          quedan de reserva.
+        </span>
+        {fotoError ? (
+          <span role="alert" className="text-body-sm text-error">
+            {fotoError}
+          </span>
+        ) : null}
       </div>
 
       <label className="flex flex-col gap-1 text-body-sm font-semibold">
@@ -218,10 +271,18 @@ function IdentityCard() {
   )
 }
 
-const CHRONOTYPES: { value: NonNullable<ProfilePatch['chronotype']>; label: string; hint: string }[] = [
-  { value: 'alondra', label: 'Alondra', hint: 'Rindes por la mañana' },
-  { value: 'intermedio', label: 'Intermedio', hint: 'Ni una cosa ni otra' },
-  { value: 'buho', label: 'Búho', hint: 'Rindes de noche' },
+// Cada cronotipo con su animal: la alondra canta al amanecer, el búho vive de noche.
+// El emoji hace el selector legible de un vistazo, que es lo que se pedía. El valor que
+// viaja al backend sigue siendo alondra/intermedio/buho.
+const CHRONOTYPES: {
+  value: NonNullable<ProfilePatch['chronotype']>
+  emoji: string
+  label: string
+  hint: string
+}[] = [
+  { value: 'alondra', emoji: '🌅', label: 'Alondra', hint: 'Rindo por la mañana' },
+  { value: 'intermedio', emoji: '⛅', label: 'Intermedio', hint: 'Según el día' },
+  { value: 'buho', emoji: '🦉', label: 'Búho', hint: 'Rindo de noche' },
 ]
 
 /**
@@ -248,12 +309,12 @@ function AboutYouCard() {
       <h3 className="text-headline-sm font-bold">Sobre ti</h3>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-body-sm font-semibold">Cronotipo</legend>
+        <legend className="text-body-sm font-semibold">¿Cuándo rindes más?</legend>
         <p className="text-body-sm opacity-60">
-          No cambia la hora recomendada —esa sale de tu hora real de despertar—, solo el
-          tono de los consejos.
+          Tu cronotipo. No cambia la hora recomendada —esa sale de tu hora real de
+          despertar—, solo el tono de los consejos.
         </p>
-        <div className="mt-1 flex flex-wrap gap-2">
+        <div className="mt-1 grid grid-cols-3 gap-2">
           {CHRONOTYPES.map((opcion) => {
             const activo = chronotype === opcion.value
             return (
@@ -262,15 +323,18 @@ function AboutYouCard() {
                 type="button"
                 aria-pressed={activo}
                 onClick={() => setPatch((p) => ({ ...p, chronotype: opcion.value }))}
-                className="min-h-touch flex-1 rounded-md px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2"
+                className="flex min-h-touch flex-col items-center gap-1 rounded-md px-2 py-3 text-center focus-visible:outline-none focus-visible:ring-2"
                 style={{
                   background: activo ? 'var(--mf-primary)' : 'var(--mf-surf-2)',
                   color: activo ? 'var(--mf-on-primary)' : undefined,
                   border: '1px solid var(--mf-line-strong)',
                 }}
               >
-                <span className="block font-semibold">{opcion.label}</span>
-                <span className="block text-body-sm opacity-80">{opcion.hint}</span>
+                <span className="text-2xl leading-none" aria-hidden>
+                  {opcion.emoji}
+                </span>
+                <span className="font-semibold">{opcion.label}</span>
+                <span className="text-body-sm opacity-80">{opcion.hint}</span>
               </button>
             )
           })}

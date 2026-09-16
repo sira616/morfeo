@@ -135,6 +135,8 @@ export type ProfilePatch = {
   poor_efficiency_threshold?: number
   /** null lo borra, como los demás campos vaciables. */
   birth_year?: number | null
+  /** Data URL de la foto; null la borra. El backend valida y re-normaliza. */
+  avatar_image?: string | null
 }
 
 export async function updateProfile(patch: ProfilePatch) {

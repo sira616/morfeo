@@ -24,6 +24,8 @@ export type AuthUser = {
   poorEfficiencyThreshold: number
   /** Año de nacimiento, no la edad: no caduca cada cumpleaños. Null = no dado. */
   birthYear: number | null
+  /** Foto de perfil como data URL ya validado por el backend. Null = sin foto. */
+  avatarUrl: string | null
 }
 
 type AuthState = {

@@ -81,3 +81,33 @@ describe('Personalización del perfil', () => {
     expect(cuerpos[0]).toHaveProperty('chronotype', 'buho')
   })
 })
+
+describe('Foto de perfil', () => {
+  beforeEach(() => login())
+
+  it('con foto, el avatar es una imagen y no la inicial', () => {
+    login({ displayName: 'Sira', avatarUrl: 'data:image/png;base64,AAAA' })
+    renderWithProviders(<ProfilePage />)
+    const imgs = screen.getAllByRole('presentation', { hidden: true })
+    // Al menos un <img> con el data URL de la foto (avatar de cabecera/tarjeta).
+    expect(imgs.some((el) => el.getAttribute('src')?.startsWith('data:image/png'))).toBe(true)
+  })
+
+  it('«Quitar foto» manda avatar_image: null', async () => {
+    const user = userEvent.setup()
+    login({ avatarUrl: 'data:image/png;base64,AAAA' })
+    const cuerpos = capturarPatch()
+    renderWithProviders(<ProfilePage />)
+
+    await user.click(screen.getByRole('button', { name: /Quitar foto/i }))
+    // Quitar la foto deja un cambio pendiente solo en Identidad, así que su «Guardar»
+    // es el único habilitado; los demás siguen deshabilitados sin cambios.
+    const guardar = screen
+      .getAllByRole('button', { name: /^Guardar$/i })
+      .find((b) => !(b as HTMLButtonElement).disabled)
+    await user.click(guardar as HTMLElement)
+
+    await waitFor(() => expect(cuerpos.length).toBeGreaterThan(0))
+    expect(cuerpos[0]).toHaveProperty('avatar_image', null)
+  })
+})
